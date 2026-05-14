@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Letreiro LED</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="controls" aria-label="Configuracoes do letreiro">
+        <div class="brand-block">
+          <span class="status-dot" aria-hidden="true"></span>
+          <div>
+            <h1>Letreiro LED</h1>
+            <p>Simulador de matriz luminosa</p>
+          </div>
+        </div>
+
+        <label class="field field-wide">
+          <span>Frase</span>
+          <input id="messageInput" type="text" value="BEM-VINDO AO LETREIRO LED" maxlength="72" />
+        </label>
+
+        <div class="control-grid">
+          <label class="field">
+            <span>Largura</span>
+            <input id="widthInput" type="number" min="16" max="512" value="88" />
+          </label>
+
+          <label class="field">
+            <span>Altura</span>
+            <input id="heightInput" type="number" min="7" max="48" value="19" />
+          </label>
+
+          <label class="field">
+            <span>Espacamento</span>
+            <input id="gapInput" type="range" min="1" max="8" value="3" />
+          </label>
+
+          <label class="field">
+            <span>Tamanho LED</span>
+            <input id="ledSizeInput" type="range" min="4" max="14" value="8" />
+          </label>
+
+          <label class="field">
+            <span>Altura da letra</span>
+            <input id="letterHeightInput" type="range" min="45" max="100" value="84" />
+          </label>
+
+          <label class="field">
+            <span>Espaco letras</span>
+            <input id="letterSpacingInput" type="range" min="0" max="8" value="2" />
+          </label>
+
+          <label class="field">
+            <span>Fonte</span>
+            <select id="fontInput">
+              <option value="matrix" selected>Matriz LED</option>
+              <option value="system">Arial forte</option>
+              <option value="mono">Monoespacada</option>
+              <option value="serif">Serifada</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Cor</span>
+            <input id="colorInput" type="color" value="#ff3b2f" />
+          </label>
+
+          <label class="field">
+            <span>Velocidade</span>
+            <input id="speedInput" type="range" min="1" max="12" value="5" />
+          </label>
+        </div>
+
+        <div class="mode-row" role="radiogroup" aria-label="Modo da frase">
+          <label>
+            <input type="radio" name="mode" value="static" />
+            <span>Estatica</span>
+          </label>
+          <label>
+            <input type="radio" name="mode" value="scroll" checked />
+            <span>Correndo</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="stage" aria-label="Pre-visualizacao do letreiro">
+        <div class="sign-frame">
+          <canvas id="ledCanvas" aria-label="Simulacao do letreiro LED"></canvas>
+          <div class="glass-shine" aria-hidden="true"></div>
+        </div>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
