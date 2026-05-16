@@ -74,6 +74,8 @@
           </label>
         </div>
 
+        <button id="editorOpenButton" class="tool-button" type="button">Editar caracteres</button>
+
         <div class="mode-row" role="radiogroup" aria-label="Modo da frase">
           <label>
             <input type="radio" name="mode" value="static" />
@@ -90,6 +92,26 @@
         <div class="sign-frame">
           <canvas id="ledCanvas" aria-label="Simulacao do letreiro LED"></canvas>
           <div class="glass-shine" aria-hidden="true"></div>
+        </div>
+      </section>
+
+      <section id="glyphEditor" class="glyph-editor" aria-label="Editor de caracteres" hidden>
+        <div class="glyph-editor-panel">
+          <header class="glyph-editor-header">
+            <div>
+              <h2>Editor</h2>
+              <p id="editorSizeLabel"></p>
+            </div>
+            <button id="editorCloseButton" class="icon-button" type="button" aria-label="Fechar">x</button>
+          </header>
+
+          <div id="editorCharacterList" class="character-list" aria-label="Caracteres"></div>
+          <div id="editorGrid" class="glyph-grid" aria-label="Matriz do caractere"></div>
+
+          <div class="editor-actions">
+            <button id="editorResetButton" class="tool-button secondary" type="button">Padrao</button>
+            <button id="editorSaveButton" class="tool-button" type="button">Salvar caractere</button>
+          </div>
         </div>
       </section>
     </main>

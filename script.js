@@ -14,10 +14,20 @@ const controls = {
   speed: document.querySelector("#speedInput"),
   modes: [...document.querySelectorAll("input[name='mode']")],
   statusDot: document.querySelector(".status-dot"),
+  editor: document.querySelector("#glyphEditor"),
+  editorOpen: document.querySelector("#editorOpenButton"),
+  editorClose: document.querySelector("#editorCloseButton"),
+  editorCharacterList: document.querySelector("#editorCharacterList"),
+  editorGrid: document.querySelector("#editorGrid"),
+  editorSizeLabel: document.querySelector("#editorSizeLabel"),
+  editorSave: document.querySelector("#editorSaveButton"),
+  editorReset: document.querySelector("#editorResetButton"),
 };
 
 const fontCanvas = document.createElement("canvas");
 const fontCtx = fontCanvas.getContext("2d", { willReadFrequently: true });
+const STORAGE_KEY = "ledMatrixSignSettings";
+const CUSTOM_GLYPHS_KEY = "ledMatrixCustomGlyphs";
 
 let animationFrame = null;
 let lastTime = 0;
@@ -26,53 +36,60 @@ let textPixels = [];
 let textWidth = 1;
 let needsTextRender = true;
 let canvasSignature = "";
+let customGlyphs = {};
+let editorCharacter = "A";
+let editorPixels = [];
 
 const clamp = (value, min, max) => Math.min(Math.max(Number(value) || min, min), max);
 const normalizeMatrixText = (value) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
 
-const matrixFont = {
-  " ": ["0000000", "0000000", "0000000", "0000000", "0000000", "0000000", "0000000", "0000000", "0000000"],
-  "-": ["0000000", "0000000", "0000000", "0000000", "0111110", "0000000", "0000000", "0000000", "0000000"],
-  ".": ["0000000", "0000000", "0000000", "0000000", "0000000", "0000000", "0000000", "0011000", "0011000"],
-  "!": ["0011000", "0011000", "0011000", "0011000", "0011000", "0000000", "0011000", "0011000", "0000000"],
-  "?": ["0111110", "1000001", "0000001", "0000010", "0001100", "0011000", "0000000", "0011000", "0000000"],
-  "0": ["0111110", "1000001", "1000011", "1000101", "1001001", "1010001", "1100001", "1000001", "0111110"],
-  "1": ["0011000", "0111000", "0011000", "0011000", "0011000", "0011000", "0011000", "0011000", "1111111"],
-  "2": ["0111110", "1000001", "0000001", "0000010", "0001100", "0011000", "0110000", "1000000", "1111111"],
-  "3": ["1111110", "0000001", "0000001", "0001110", "0000001", "0000001", "0000001", "1000001", "0111110"],
-  "4": ["0000110", "0001110", "0010110", "0100110", "1000110", "1111111", "0000110", "0000110", "0000110"],
-  "5": ["1111111", "1000000", "1000000", "1111110", "0000001", "0000001", "0000001", "1000001", "0111110"],
-  "6": ["0011110", "0100000", "1000000", "1000000", "1111110", "1000001", "1000001", "1000001", "0111110"],
-  "7": ["1111111", "0000001", "0000010", "0000100", "0001000", "0010000", "0100000", "0100000", "0100000"],
-  "8": ["0111110", "1000001", "1000001", "1000001", "0111110", "1000001", "1000001", "1000001", "0111110"],
-  "9": ["0111110", "1000001", "1000001", "1000001", "0111111", "0000001", "0000001", "0000010", "0111100"],
-  A: ["0011100", "0100010", "1000001", "1000001", "1111111", "1000001", "1000001", "1000001", "1000001"],
-  B: ["1111110", "1000001", "1000001", "1000001", "1111110", "1000001", "1000001", "1000001", "1111110"],
-  C: ["0111110", "1000001", "1000000", "1000000", "1000000", "1000000", "1000000", "1000001", "0111110"],
-  D: ["1111100", "1000010", "1000001", "1000001", "1000001", "1000001", "1000001", "1000010", "1111100"],
-  E: ["1111111", "1000000", "1000000", "1000000", "1111110", "1000000", "1000000", "1000000", "1111111"],
-  F: ["1111111", "1000000", "1000000", "1000000", "1111110", "1000000", "1000000", "1000000", "1000000"],
-  G: ["0111110", "1000001", "1000000", "1000000", "1001111", "1000001", "1000001", "1000001", "0111110"],
-  H: ["1000001", "1000001", "1000001", "1000001", "1111111", "1000001", "1000001", "1000001", "1000001"],
-  I: ["0111110", "0001000", "0001000", "0001000", "0001000", "0001000", "0001000", "0001000", "0111110"],
-  J: ["0001111", "0000010", "0000010", "0000010", "0000010", "0000010", "1000010", "1000010", "0111100"],
-  K: ["1000001", "1000010", "1000100", "1001000", "1110000", "1001000", "1000100", "1000010", "1000001"],
-  L: ["1000000", "1000000", "1000000", "1000000", "1000000", "1000000", "1000000", "1000000", "1111111"],
-  M: ["1000001", "1100011", "1110111", "1011101", "1010101", "1000001", "1000001", "1000001", "1000001"],
-  N: ["1000001", "1100001", "1110001", "1011001", "1001101", "1000111", "1000011", "1000001", "1000001"],
-  O: ["0111110", "1000001", "1000001", "1000001", "1000001", "1000001", "1000001", "1000001", "0111110"],
-  P: ["1111110", "1000001", "1000001", "1000001", "1111110", "1000000", "1000000", "1000000", "1000000"],
-  Q: ["0111110", "1000001", "1000001", "1000001", "1000001", "1001001", "1000101", "1000010", "0111101"],
-  R: ["1111110", "1000001", "1000001", "1000001", "1111110", "1001000", "1000100", "1000010", "1000001"],
-  S: ["0111111", "1000000", "1000000", "1000000", "0111110", "0000001", "0000001", "0000001", "1111110"],
-  T: ["1111111", "0001000", "0001000", "0001000", "0001000", "0001000", "0001000", "0001000", "0001000"],
-  U: ["1000001", "1000001", "1000001", "1000001", "1000001", "1000001", "1000001", "1000001", "0111110"],
-  V: ["1000001", "1000001", "1000001", "1000001", "0100010", "0100010", "0010100", "0010100", "0001000"],
-  W: ["1000001", "1000001", "1000001", "1000001", "1010101", "1011101", "1110111", "1100011", "1000001"],
-  X: ["1000001", "1000001", "0100010", "0010100", "0001000", "0010100", "0100010", "1000001", "1000001"],
-  Y: ["1000001", "1000001", "0100010", "0010100", "0001000", "0001000", "0001000", "0001000", "0001000"],
-  Z: ["1111111", "0000001", "0000010", "0000100", "0001000", "0010000", "0100000", "1000000", "1111111"],
+const matrixFont5x7 = {
+  " ": ["00000", "00000", "00000", "00000", "00000", "00000", "00000"],
+  "-": ["00000", "00000", "00000", "11111", "00000", "00000", "00000"],
+  ".": ["00000", "00000", "00000", "00000", "00000", "01100", "01100"],
+  ",": ["00000", "00000", "00000", "00000", "00000", "01100", "00100"],
+  "!": ["00100", "00100", "00100", "00100", "00100", "00000", "00100"],
+  "?": ["01110", "10001", "00001", "00010", "00100", "00000", "00100"],
+  ":": ["00000", "01100", "01100", "00000", "01100", "01100", "00000"],
+  "0": ["01110", "10001", "10011", "10101", "11001", "10001", "01110"],
+  "1": ["00100", "01100", "00100", "00100", "00100", "00100", "01110"],
+  "2": ["01110", "10001", "00001", "00010", "00100", "01000", "11111"],
+  "3": ["11110", "00001", "00001", "01110", "00001", "00001", "11110"],
+  "4": ["00010", "00110", "01010", "10010", "11111", "00010", "00010"],
+  "5": ["11111", "10000", "10000", "11110", "00001", "00001", "11110"],
+  "6": ["00110", "01000", "10000", "11110", "10001", "10001", "01110"],
+  "7": ["11111", "00001", "00010", "00100", "01000", "01000", "01000"],
+  "8": ["01110", "10001", "10001", "01110", "10001", "10001", "01110"],
+  "9": ["01110", "10001", "10001", "01111", "00001", "00010", "11100"],
+  A: ["01110", "10001", "10001", "11111", "10001", "10001", "10001"],
+  B: ["11110", "10001", "10001", "11110", "10001", "10001", "11110"],
+  C: ["01111", "10000", "10000", "10000", "10000", "10000", "01111"],
+  D: ["11110", "10001", "10001", "10001", "10001", "10001", "11110"],
+  E: ["11111", "10000", "10000", "11110", "10000", "10000", "11111"],
+  F: ["11111", "10000", "10000", "11110", "10000", "10000", "10000"],
+  G: ["01111", "10000", "10000", "10011", "10001", "10001", "01111"],
+  H: ["10001", "10001", "10001", "11111", "10001", "10001", "10001"],
+  I: ["01110", "00100", "00100", "00100", "00100", "00100", "01110"],
+  J: ["00001", "00001", "00001", "00001", "10001", "10001", "01110"],
+  K: ["10001", "10010", "10100", "11000", "10100", "10010", "10001"],
+  L: ["10000", "10000", "10000", "10000", "10000", "10000", "11111"],
+  M: ["10001", "11011", "10101", "10101", "10001", "10001", "10001"],
+  N: ["10001", "11001", "10101", "10011", "10001", "10001", "10001"],
+  O: ["01110", "10001", "10001", "10001", "10001", "10001", "01110"],
+  P: ["11110", "10001", "10001", "11110", "10000", "10000", "10000"],
+  Q: ["01110", "10001", "10001", "10001", "10101", "10010", "01101"],
+  R: ["11110", "10001", "10001", "11110", "10100", "10010", "10001"],
+  S: ["01111", "10000", "10000", "01110", "00001", "00001", "11110"],
+  T: ["11111", "00100", "00100", "00100", "00100", "00100", "00100"],
+  U: ["10001", "10001", "10001", "10001", "10001", "10001", "01110"],
+  V: ["10001", "10001", "10001", "10001", "01010", "01010", "00100"],
+  W: ["10001", "10001", "10001", "10101", "10101", "10101", "01010"],
+  X: ["10001", "10001", "01010", "00100", "01010", "10001", "10001"],
+  Y: ["10001", "10001", "01010", "00100", "00100", "00100", "00100"],
+  Z: ["11111", "00001", "00010", "00100", "01000", "10000", "11111"],
 };
+
+const matrixCharacters = Object.keys(matrixFont5x7);
 
 function getSettings() {
   return {
@@ -88,6 +105,229 @@ function getSettings() {
     mode: document.querySelector("input[name='mode']:checked").value,
     message: controls.message.value.trim() || " ",
   };
+}
+
+function getControlState() {
+  return {
+    message: controls.message.value,
+    width: controls.width.value,
+    height: controls.height.value,
+    gap: controls.gap.value,
+    ledSize: controls.ledSize.value,
+    letterHeight: controls.letterHeight.value,
+    letterSpacing: controls.letterSpacing.value,
+    font: controls.font.value,
+    color: controls.color.value,
+    speed: controls.speed.value,
+    mode: document.querySelector("input[name='mode']:checked").value,
+  };
+}
+
+function saveSettings() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(getControlState()));
+  } catch {
+    // Storage can be unavailable in private or restricted browser contexts.
+  }
+}
+
+function restoreSettings() {
+  try {
+    const storedSettings = JSON.parse(localStorage.getItem(STORAGE_KEY));
+
+    if (!storedSettings || typeof storedSettings !== "object") {
+      return;
+    }
+
+    Object.entries(storedSettings).forEach(([key, value]) => {
+      if (key === "mode") {
+        const mode = controls.modes.find((control) => control.value === value);
+
+        if (mode) {
+          mode.checked = true;
+        }
+
+        return;
+      }
+
+      if (controls[key] && typeof value === "string") {
+        controls[key].value = value;
+      }
+    });
+
+    syncNumberBounds(controls.height);
+    syncNumberBounds(controls.width);
+  } catch {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // Ignore storage cleanup failures for the same reason.
+    }
+  }
+}
+
+function loadCustomGlyphs() {
+  try {
+    const storedGlyphs = JSON.parse(localStorage.getItem(CUSTOM_GLYPHS_KEY));
+    customGlyphs = storedGlyphs && typeof storedGlyphs === "object" ? storedGlyphs : {};
+  } catch {
+    customGlyphs = {};
+  }
+}
+
+function saveCustomGlyphs() {
+  try {
+    localStorage.setItem(CUSTOM_GLYPHS_KEY, JSON.stringify(customGlyphs));
+  } catch {
+    // Keep the editor usable even when storage is restricted.
+  }
+}
+
+function getMatrixGlyphSize(targetHeight) {
+  return {
+    height: targetHeight,
+    width: Math.max(4, Math.round((targetHeight * 5) / 7)),
+  };
+}
+
+function getCustomGlyphKey(char, targetHeight) {
+  const size = getMatrixGlyphSize(targetHeight);
+  return `${size.width}x${size.height}:${char}`;
+}
+
+function glyphToStrings(glyph) {
+  return glyph.map((row) => row.map((active) => (active ? "1" : "0")).join(""));
+}
+
+function stringsToGlyph(glyph) {
+  return glyph.map((row) => [...row].map((pixel) => pixel === "1"));
+}
+
+function getMatrixGlyph(char, targetHeight) {
+  const normalizedChar = matrixFont5x7[char] ? char : "?";
+  const key = getCustomGlyphKey(normalizedChar, targetHeight);
+
+  if (customGlyphs[key]) {
+    return stringsToGlyph(customGlyphs[key]);
+  }
+
+  const size = getMatrixGlyphSize(targetHeight);
+  return scaleMatrixGlyph(matrixFont5x7[normalizedChar], size.width, size.height);
+}
+
+function cloneGlyph(glyph) {
+  return glyph.map((row) => [...row]);
+}
+
+function openGlyphEditor() {
+  controls.editor.hidden = false;
+  renderCharacterList();
+  loadEditorCharacter(editorCharacter);
+}
+
+function closeGlyphEditor() {
+  controls.editor.hidden = true;
+}
+
+function renderCharacterList() {
+  controls.editorCharacterList.replaceChildren(
+    ...matrixCharacters.map((char) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `character-button${char === editorCharacter ? " is-active" : ""}`;
+      button.textContent = char === " " ? "SP" : char;
+      button.setAttribute("aria-label", char === " " ? "Espaco" : `Caractere ${char}`);
+      button.addEventListener("click", () => {
+        editorCharacter = char;
+        renderCharacterList();
+        loadEditorCharacter(char);
+      });
+
+      return button;
+    }),
+  );
+}
+
+function loadEditorCharacter(char) {
+  const settings = getSettings();
+  const targetHeight = getLetterHeight(settings);
+  const size = getMatrixGlyphSize(targetHeight);
+
+  editorPixels = cloneGlyph(getMatrixGlyph(char, targetHeight));
+  controls.editorSizeLabel.textContent = `${char === " " ? "Espaco" : char} ${size.width}x${size.height}`;
+  renderEditorGrid();
+}
+
+function renderEditorGrid() {
+  controls.editorGrid.style.setProperty("--glyph-columns", editorPixels[0]?.length || 1);
+  controls.editorGrid.style.setProperty("--glyph-rows", editorPixels.length || 1);
+  resizeEditorGrid();
+  controls.editorGrid.replaceChildren(
+    ...editorPixels.flatMap((row, y) =>
+      row.map((active, x) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `glyph-cell${active ? " is-active" : ""}`;
+        button.setAttribute("aria-label", `${x + 1},${y + 1}`);
+        button.addEventListener("click", () => {
+          editorPixels[y][x] = !editorPixels[y][x];
+          renderEditorGrid();
+        });
+
+        return button;
+      }),
+    ),
+  );
+}
+
+function resizeEditorGrid() {
+  if (controls.editor.hidden || editorPixels.length === 0) {
+    return;
+  }
+
+  const panel = controls.editor.querySelector(".glyph-editor-panel");
+  const header = controls.editor.querySelector(".glyph-editor-header");
+  const actions = controls.editor.querySelector(".editor-actions");
+  const columns = editorPixels[0]?.length || 1;
+  const rows = editorPixels.length || 1;
+  const panelStyle = getComputedStyle(panel);
+  const gridStyle = getComputedStyle(controls.editorGrid);
+  const gap = parseFloat(gridStyle.columnGap) || 0;
+  const panelGap = parseFloat(panelStyle.rowGap) || 0;
+  const panelPaddingY = parseFloat(panelStyle.paddingTop) + parseFloat(panelStyle.paddingBottom);
+  const panelPaddingX = parseFloat(panelStyle.paddingLeft) + parseFloat(panelStyle.paddingRight);
+  const reservedHeight =
+    header.offsetHeight + controls.editorCharacterList.offsetHeight + actions.offsetHeight + panelGap * 3 + panelPaddingY + 18;
+  const availableHeight = Math.max(90, panel.clientHeight - reservedHeight);
+  const availableWidth = Math.max(90, panel.clientWidth - panelPaddingX - 18);
+  const cellByHeight = (availableHeight - gap * (rows - 1)) / rows;
+  const cellByWidth = (availableWidth - gap * (columns - 1)) / columns;
+  const cellSize = Math.max(12, Math.floor(Math.min(cellByHeight, cellByWidth, 54)));
+
+  controls.editorGrid.style.setProperty("--glyph-cell-size", `${cellSize}px`);
+}
+
+function saveEditorCharacter() {
+  const targetHeight = getLetterHeight(getSettings());
+  const key = getCustomGlyphKey(editorCharacter, targetHeight);
+  customGlyphs[key] = glyphToStrings(editorPixels);
+  saveCustomGlyphs();
+  markTextDirty();
+}
+
+function resetEditorCharacter() {
+  const targetHeight = getLetterHeight(getSettings());
+  const key = getCustomGlyphKey(editorCharacter, targetHeight);
+  delete customGlyphs[key];
+  saveCustomGlyphs();
+  loadEditorCharacter(editorCharacter);
+  markTextDirty();
+}
+
+function refreshEditorIfOpen() {
+  if (!controls.editor.hidden) {
+    loadEditorCharacter(editorCharacter);
+  }
 }
 
 function renderTextMap(settings) {
@@ -239,9 +479,10 @@ function findActiveBounds(image, width, height) {
 }
 
 function renderMatrixTextMap(settings) {
-  const chars = [...normalizeMatrixText(settings.message)].map((char) => matrixFont[char] || matrixFont["?"]);
   const targetHeight = getLetterHeight(settings);
-  const charWidth = Math.max(4, Math.round((targetHeight * 7) / 9));
+  const size = getMatrixGlyphSize(targetHeight);
+  const chars = [...normalizeMatrixText(settings.message)].map((char) => getMatrixGlyph(char, targetHeight));
+  const charWidth = size.width;
   const charGap = settings.letterSpacing + Math.max(1, Math.round(charWidth * 0.12));
   const topOffset = Math.max(0, Math.floor((settings.rows - targetHeight) / 2));
 
@@ -250,15 +491,10 @@ function renderMatrixTextMap(settings) {
 
   let cursor = charGap;
   chars.forEach((glyph) => {
-    for (let y = 0; y < targetHeight; y += 1) {
-      const glyphY = Math.min(8, Math.floor((y * 9) / targetHeight));
-
-      for (let x = 0; x < charWidth; x += 1) {
-        const glyphX = Math.min(6, Math.floor((x * 7) / charWidth));
-        const pixel = glyph[glyphY][glyphX];
-
-        if (pixel !== "1") {
-          continue;
+    glyph.forEach((row, y) => {
+      row.forEach((active, x) => {
+        if (!active) {
+          return;
         }
 
         const targetY = topOffset + y;
@@ -267,13 +503,43 @@ function renderMatrixTextMap(settings) {
         if (textPixels[targetY]?.[targetX] !== undefined) {
           textPixels[targetY][targetX] = true;
         }
-      }
-    }
+      });
+    });
 
     cursor += charWidth + charGap;
   });
 
   needsTextRender = false;
+}
+
+function scaleMatrixGlyph(glyph, targetWidth, targetHeight) {
+  const sourceHeight = glyph.length;
+  const sourceWidth = glyph[0]?.length || 0;
+  const pixels = Array.from({ length: targetHeight }, () => Array.from({ length: targetWidth }, () => false));
+
+  glyph.forEach((row, sourceY) => {
+    const startY = Math.round((sourceY * targetHeight) / sourceHeight);
+    const endY = Math.round(((sourceY + 1) * targetHeight) / sourceHeight);
+
+    [...row].forEach((pixel, sourceX) => {
+      if (pixel !== "1") {
+        return;
+      }
+
+      const startX = Math.round((sourceX * targetWidth) / sourceWidth);
+      const endX = Math.round(((sourceX + 1) * targetWidth) / sourceWidth);
+
+      for (let y = startY; y < endY; y += 1) {
+        for (let x = startX; x < endX; x += 1) {
+          if (pixels[y]?.[x] !== undefined) {
+            pixels[y][x] = true;
+          }
+        }
+      }
+    });
+  });
+
+  return pixels;
 }
 
 function getLetterHeight(settings) {
@@ -379,17 +645,33 @@ function syncNumberBounds(input) {
   input.value = clamp(input.value, input.min, input.max);
 }
 
-controls.message.addEventListener("input", markTextDirty);
-controls.font.addEventListener("input", markTextDirty);
-controls.letterHeight.addEventListener("input", markTextDirty);
-controls.letterSpacing.addEventListener("input", markTextDirty);
+controls.message.addEventListener("input", () => {
+  markTextDirty();
+  saveSettings();
+});
+controls.font.addEventListener("input", () => {
+  markTextDirty();
+  saveSettings();
+});
+controls.letterHeight.addEventListener("input", () => {
+  markTextDirty();
+  refreshEditorIfOpen();
+  saveSettings();
+});
+controls.letterSpacing.addEventListener("input", () => {
+  markTextDirty();
+  saveSettings();
+});
 controls.height.addEventListener("input", () => {
   syncNumberBounds(controls.height);
   markTextDirty();
+  refreshEditorIfOpen();
+  saveSettings();
 });
 controls.width.addEventListener("input", () => {
   syncNumberBounds(controls.width);
   markTextDirty();
+  saveSettings();
 });
 
 [controls.gap, controls.ledSize, controls.color, controls.speed, ...controls.modes].forEach((control) => {
@@ -397,13 +679,29 @@ controls.width.addEventListener("input", () => {
     if (control.name === "mode") {
       scrollOffset = 0;
     }
+
+    saveSettings();
   });
 });
 
+controls.editorOpen.addEventListener("click", openGlyphEditor);
+controls.editorClose.addEventListener("click", closeGlyphEditor);
+controls.editorSave.addEventListener("click", saveEditorCharacter);
+controls.editorReset.addEventListener("click", resetEditorCharacter);
+controls.editor.addEventListener("click", (event) => {
+  if (event.target === controls.editor) {
+    closeGlyphEditor();
+  }
+});
+
 window.addEventListener("resize", () => {
+  resizeEditorGrid();
+
   if (!animationFrame) {
     draw();
   }
 });
 
+restoreSettings();
+loadCustomGlyphs();
 draw();
