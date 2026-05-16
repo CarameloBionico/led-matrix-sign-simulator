@@ -7,6 +7,7 @@ O projeto comecou como um simulador simples de frase em matriz LED e esta evolui
 ## Documentacao
 
 - [Arquitetura de fontes bitmap](docs/font-architecture.md)
+- [Plano de execucao](docs/implementation-plan.md)
 
 ## Direcao do projeto
 
