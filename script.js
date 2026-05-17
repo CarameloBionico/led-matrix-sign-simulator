@@ -36,6 +36,7 @@ const controls = {
   editorAddCharacter: document.querySelector("#editorAddCharacterButton"),
   editorCopyCharacter: document.querySelector("#editorCopyCharacterButton"),
   editorPasteCharacter: document.querySelector("#editorPasteCharacterButton"),
+  editorDeleteCharacter: document.querySelector("#editorDeleteCharacterButton"),
   fontPreview: document.querySelector("#fontPreview"),
   glyphWidth: document.querySelector("#glyphWidthInput"),
   glyphAdvance: document.querySelector("#glyphAdvanceInput"),
@@ -963,10 +964,16 @@ function cloneGlyph(glyph) {
 }
 
 function syncEditorClipboardControls() {
+  const font = ensureActiveFont();
+
   controls.editorPasteCharacter.disabled = !editorClipboard;
   controls.editorPasteCharacter.title = editorClipboard
     ? `Colar matriz copiada de ${editorClipboard.char === " " ? "Espaco" : editorClipboard.char}`
     : "Copie um caractere antes de colar";
+  controls.editorDeleteCharacter.disabled = editorCharacter === " " || editorCharacter === font.metrics.fallback;
+  controls.editorDeleteCharacter.title = controls.editorDeleteCharacter.disabled
+    ? "Espaco e fallback nao podem ser apagados"
+    : `Apagar ${editorCharacter}`;
 }
 
 function openGlyphEditor() {
@@ -1218,17 +1225,22 @@ function renderEditorGrid() {
 }
 
 function addEditorCharacter() {
-  const [char] = [...controls.editorNewCharacter.value.trim()];
+  const chars = [...controls.editorNewCharacter.value.trim()];
 
-  if (!char) {
+  if (chars.length === 0) {
     return;
   }
 
   const font = ensureActiveFont();
   const width = font.metrics.defaultAdvance;
   const height = font.metrics.height;
+  let createdAny = false;
 
-  if (!font.glyphs[char]) {
+  chars.forEach((char) => {
+    if (font.glyphs[char]) {
+      return;
+    }
+
     font.glyphs[char] = createGlyph({
       char,
       rows: Array.from({ length: height }, () => "0".repeat(width)),
@@ -1237,13 +1249,43 @@ function addEditorCharacter() {
       advance: width,
       category: getCharacterCategory(char),
     });
+    createdAny = true;
+  });
+
+  if (createdAny) {
     font.updatedAt = new Date().toISOString();
     saveFontLibrary();
   }
 
-  editorCharacter = char;
+  editorCharacter = chars[chars.length - 1];
   controls.editorNewCharacter.value = "";
-  loadEditorCharacter(char);
+  loadEditorCharacter(editorCharacter);
+  renderFontPreview();
+  markTextDirty();
+}
+
+function deleteEditorCharacter() {
+  const font = ensureActiveFont();
+
+  if (editorCharacter === " " || editorCharacter === font.metrics.fallback || !font.glyphs[editorCharacter]) {
+    syncEditorClipboardControls();
+    return;
+  }
+
+  const label = editorCharacter === " " ? "Espaco" : editorCharacter;
+  const confirmed = window.confirm(`Apagar o caractere "${label}" desta fonte?`);
+
+  if (!confirmed) {
+    return;
+  }
+
+  delete font.glyphs[editorCharacter];
+  font.updatedAt = new Date().toISOString();
+  saveFontLibrary();
+
+  const characters = Object.keys(font.glyphs).sort((left, right) => left.localeCompare(right, "pt-BR"));
+  editorCharacter = characters.includes("A") ? "A" : characters[0] || font.metrics.fallback;
+  loadEditorCharacter(editorCharacter);
   renderFontPreview();
   markTextDirty();
 }
@@ -1784,6 +1826,7 @@ controls.editorReset.addEventListener("click", resetEditorCharacter);
 controls.editorAddCharacter.addEventListener("click", addEditorCharacter);
 controls.editorCopyCharacter.addEventListener("click", copyEditorCharacter);
 controls.editorPasteCharacter.addEventListener("click", pasteEditorCharacter);
+controls.editorDeleteCharacter.addEventListener("click", deleteEditorCharacter);
 controls.fontMonospace.addEventListener("change", setFontMonospaceMode);
 controls.fontDefaultAdvance.addEventListener("input", updateDefaultAdvance);
 controls.fontSaveAs.addEventListener("click", saveActiveFontAs);
