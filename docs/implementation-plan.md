@@ -253,17 +253,18 @@ Objetivo: permitir backup, compartilhamento e preparacao para hardware.
 
 Entregaveis:
 
-- Botao exportar fonte ativa.
-- Download de JSON.
-- Botao importar JSON.
+- Botao exportar familia ativa.
+- Download de JSON com pacote `led-matrix-font-family`.
+- Botao importar familia JSON.
 - Validador de importacao.
 - Tratamento de conflito de `id`.
+- Compatibilidade com JSON antigo de fonte unica.
 
 Criterios de aceite:
 
-- Exportar uma fonte editada.
+- Exportar uma familia editada.
 - Recarregar/importar em outro navegador.
-- A fonte importada renderiza igual.
+- A familia importada renderiza igual.
 
 ## Fase 10: exportadores para hardware
 
@@ -320,3 +321,48 @@ Antes dos exportadores finais, precisamos decidir:
 5. Fase 4: migrar armazenamento.
 
 So depois disso vale investir em import/export e acentos, porque eles dependem de a fonte ja ser uma entidade completa.
+
+## Progresso da primeira implementacao
+
+Implementado:
+
+- `baseFont5x7` no formato formal inicial.
+- `fontLibrary` persistida em `localStorage`.
+- `activeFont` derivada da altura atual.
+- `projectFont(baseFont, options)` para gerar fonte projetada a partir da 5x7.
+- Render da fonte matriz usando glifos prontos da `activeFont`.
+- Editor salvando glifos dentro da fonte ativa.
+- Adicao manual de novos caracteres digitaveis no editor.
+- Migracao inicial da chave antiga `ledMatrixCustomGlyphs` para a biblioteca de fontes.
+- Exportacao JSON da familia ativa.
+- Importacao JSON de familia com validacao estrutural.
+- Compatibilidade de importacao com JSON antigo de fonte unica.
+- Render preservando caracteres Unicode quando a fonte ativa possui o glifo, com fallback para normalizacao quando nao possui.
+- Editor com controles iniciais de `width`, `advance`, `offsetX` e `offsetY` por glifo.
+- Redimensionamento horizontal do bitmap preservando pixels existentes.
+- Editor renomeado para "Editar fonte" e aberto em tela inteira.
+- Preview visual de todos os glifos cadastrados em formato de letreiro.
+- Guias visuais iniciais de baseline e advance no display do glifo em edicao.
+- Preview de fonte com quebra em multiplas linhas.
+- Correcao do `clamp` para aceitar zero com ranges negativos.
+- Controles globais iniciais de `baseline`, `ascent`, `descent`, `capHeight` e `xHeight`.
+- Acao de derivacao de fonte projetada com nome escolhido pelo usuario.
+- Derivacao/materializacao de fonte projetada em canvas de altura total do letreiro,
+  preservando a letra menor com espacos editaveis acima e abaixo.
+- Reorganizacao dos controles principais em linha de letreiro e linha de fonte.
+- Salvar como para duplicar a familia ativa com novo nome.
+- Apagar familias customizadas salvas no navegador.
+- Reparacao de familias antigas que corrompiam o nome visivel da fonte base.
+- Modo monoespacado com `advance` bloqueado por glifo.
+- Modo proporcional/adaptado com `advance` por glifo.
+- Largura padrao editavel para fontes monoespacadas.
+- Copiar e colar matriz de caractere para criar variantes.
+- Cabecalho do editor mostrando familia e altura como leitura.
+
+Ainda pendente:
+
+- Seletor visual de fontes salvas/importadas.
+- Redimensionamento vertical controlado do glifo, se decidirmos permitir glifos com altura diferente da fonte.
+- Anchors editaveis.
+- Composicao de acentos e cedilha.
+- Exportadores especificos para hardware.

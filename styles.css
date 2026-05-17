@@ -37,8 +37,7 @@ button {
 .controls {
   order: 2;
   display: flex;
-  align-items: end;
-  flex-wrap: wrap;
+  align-items: start;
   gap: 18px;
   padding: 18px clamp(18px, 3vw, 34px);
   background: rgba(12, 14, 15, 0.76);
@@ -78,11 +77,6 @@ p {
   font-size: 0.92rem;
 }
 
-.controls > .field-wide {
-  flex: 1 1 280px;
-  max-width: 360px;
-}
-
 .field {
   display: grid;
   gap: 9px;
@@ -95,6 +89,12 @@ p {
   font-weight: 700;
   letter-spacing: 0;
   text-transform: uppercase;
+}
+
+.field strong {
+  color: #60c2a8;
+  font-size: 0.78rem;
+  font-weight: 800;
 }
 
 .field input,
@@ -134,15 +134,33 @@ input[type="color"] {
   background: #23272a;
 }
 
-.control-grid {
+.controls-stack {
   display: grid;
-  grid-template-columns: repeat(9, minmax(96px, 1fr));
+  gap: 14px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.control-row {
+  display: grid;
+  align-items: end;
   gap: 12px;
-  flex: 3 1 760px;
+}
+
+.sign-controls {
+  grid-template-columns: minmax(220px, 2fr) repeat(8, minmax(86px, 1fr)) minmax(190px, auto);
+}
+
+.font-controls {
+  grid-template-columns: minmax(220px, 1.8fr) repeat(4, auto);
 }
 
 .field-wide {
   width: 100%;
+}
+
+.font-field {
+  min-width: 220px;
 }
 
 .mode-row {
@@ -200,6 +218,11 @@ input[type="color"] {
   color: #dbe2de;
 }
 
+.tool-button.danger {
+  border-color: rgba(255, 138, 76, 0.35);
+  color: #ffb08a;
+}
+
 .icon-button {
   width: 44px;
   padding: 0;
@@ -210,12 +233,10 @@ input[type="color"] {
   position: fixed;
   inset: 0;
   z-index: 4;
-  display: grid;
-  place-items: center;
-  padding: 18px;
+  display: block;
+  padding: 0;
   overflow: hidden;
-  background: rgba(8, 10, 11, 0.74);
-  backdrop-filter: blur(10px);
+  background: #101314;
 }
 
 .glyph-editor[hidden] {
@@ -224,17 +245,17 @@ input[type="color"] {
 
 .glyph-editor-panel {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto minmax(270px, 30vh) auto minmax(0, 1fr);
   gap: 14px;
-  width: min(100%, 760px);
-  max-height: calc(100vh - 36px);
-  height: calc(100vh - 36px);
+  width: 100%;
+  height: 100vh;
+  max-height: 100vh;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  padding: 18px;
+  border: 0;
+  border-radius: 0;
+  padding: 18px clamp(18px, 3vw, 34px);
   background: #171a1c;
-  box-shadow: 0 32px 90px rgba(0, 0, 0, 0.56);
+  box-shadow: none;
 }
 
 .glyph-editor-header {
@@ -249,40 +270,276 @@ input[type="color"] {
   font-size: 1.35rem;
 }
 
-.character-list {
+.editor-title-block {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(38px, 1fr));
-  gap: 7px;
-}
-
-.character-button {
+  grid-template-columns: auto minmax(220px, 360px) minmax(90px, 120px);
+  align-items: end;
+  gap: 12px;
   min-width: 0;
-  min-height: 38px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 6px;
-  background: #23272a;
-  color: #eef4f1;
-  font-weight: 800;
 }
 
-.character-button.is-active {
+.editor-title-block h2 {
+  align-self: center;
+}
+
+.editor-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: 10px;
+}
+
+.editor-family-field,
+.editor-height-field {
+  min-width: 0;
+}
+
+.editor-readout {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+}
+
+.editor-readout span {
+  color: #87918c;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.editor-readout strong {
+  min-height: 38px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 7px;
+  padding: 10px 12px;
+  background: #111415;
+  color: #eef4f1;
+  font-size: 0.95rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.font-preview {
+  --preview-led-size: 3px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  gap: 8px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  align-content: start;
+  border: 8px solid #08090a;
+  border-radius: 8px;
+  padding: 8px;
+  background: #060707;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 18px 46px rgba(0, 0, 0, 0.3);
+}
+
+.font-global-metrics {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.9fr) repeat(6, minmax(86px, 1fr));
+  gap: 10px;
+}
+
+.font-global-metrics input {
+  min-height: 38px;
+}
+
+.toggle-field {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+  min-height: 38px;
+  padding: 0 12px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 7px;
+  background: #23272a;
+  color: #dbe2de;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.toggle-field input {
+  width: 18px;
+  height: 18px;
+  accent-color: #60c2a8;
+}
+
+.preview-glyph {
+  display: grid;
+  gap: 3px;
+  min-width: max-content;
+  padding: 3px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+}
+
+.preview-glyph.is-active {
   border-color: #60c2a8;
-  background: #285044;
+  background: rgba(96, 194, 168, 0.1);
+}
+
+.preview-glyph-label {
+  color: #cbd3cf;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.preview-glyph-grid {
+  display: grid;
+  gap: 1px;
+}
+
+.preview-led {
+  width: var(--preview-led-size);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: rgba(54, 60, 58, 0.45);
+}
+
+.preview-led.is-active {
+  background: #ff3b2f;
+  box-shadow: 0 0 6px rgba(255, 59, 47, 0.6);
+}
+
+.character-create {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  gap: 10px;
+}
+
+.glyph-metrics {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.glyph-metrics input {
+  min-height: 38px;
+}
+
+.glyph-edit-area {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 430px);
+  gap: 18px;
+  min-height: 0;
+}
+
+.glyph-side-panel {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(140px, 1fr);
+  align-self: center;
+  gap: 14px;
 }
 
 .glyph-grid {
   --glyph-columns: 5;
   --glyph-rows: 7;
   --glyph-cell-size: 36px;
+  --glyph-grid-gap: 5px;
+  --glyph-baseline: 6;
+  --glyph-advance: 5;
+  --glyph-ascent-line: 0;
+  --glyph-descent-line: 7;
+  --glyph-cap-line: 0;
+  --glyph-x-line: 2;
+  position: relative;
   display: grid;
   grid-template-columns: repeat(var(--glyph-columns), var(--glyph-cell-size));
   grid-template-rows: repeat(var(--glyph-rows), var(--glyph-cell-size));
-  gap: 5px;
+  gap: var(--glyph-grid-gap);
   align-self: center;
   justify-self: center;
   width: max-content;
   height: max-content;
   margin-inline: auto;
+  touch-action: none;
+  user-select: none;
+}
+
+.glyph-guide {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.glyph-grid.guides-hidden .glyph-guide {
+  display: none;
+}
+
+.glyph-guide-horizontal {
+  left: -8px;
+  right: -8px;
+  border-top: 2px solid var(--guide-color);
+}
+
+.glyph-guide-horizontal::after {
+  position: absolute;
+  right: calc(100% + 8px);
+  top: -0.48rem;
+  color: var(--guide-color);
+  content: attr(data-label);
+  white-space: nowrap;
+}
+
+.glyph-guide-vertical {
+  top: -8px;
+  bottom: -8px;
+  border-left: 2px dashed var(--guide-color);
+}
+
+.glyph-guide-vertical::after {
+  position: absolute;
+  left: 6px;
+  top: -0.2rem;
+  color: var(--guide-color);
+  content: attr(data-label);
+  white-space: nowrap;
+}
+
+.glyph-guide-baseline {
+  --guide-color: rgba(96, 194, 168, 0.9);
+  top: calc((var(--glyph-baseline) + 1) * (var(--glyph-cell-size) + var(--glyph-grid-gap)) - var(--glyph-grid-gap) / 2);
+}
+
+.glyph-guide-ascent {
+  --guide-color: rgba(109, 170, 255, 0.85);
+  top: calc(var(--glyph-ascent-line) * (var(--glyph-cell-size) + var(--glyph-grid-gap)) - var(--glyph-grid-gap) / 2);
+}
+
+.glyph-guide-descent {
+  --guide-color: rgba(255, 138, 76, 0.85);
+  top: calc(var(--glyph-descent-line) * (var(--glyph-cell-size) + var(--glyph-grid-gap)) - var(--glyph-grid-gap) / 2);
+}
+
+.glyph-guide-cap {
+  --guide-color: rgba(217, 151, 255, 0.85);
+  top: calc(var(--glyph-cap-line) * (var(--glyph-cell-size) + var(--glyph-grid-gap)) - var(--glyph-grid-gap) / 2);
+  border-top-style: dashed;
+}
+
+.glyph-guide-xheight {
+  --guide-color: rgba(255, 230, 112, 0.85);
+  top: calc(var(--glyph-x-line) * (var(--glyph-cell-size) + var(--glyph-grid-gap)) - var(--glyph-grid-gap) / 2);
+  border-top-style: dashed;
+}
+
+.glyph-guide-advance {
+  --guide-color: rgba(255, 214, 102, 0.9);
+  left: calc(var(--glyph-advance) * (var(--glyph-cell-size) + var(--glyph-grid-gap)) - var(--glyph-grid-gap) / 2);
 }
 
 .glyph-cell {
@@ -291,6 +548,7 @@ input[type="color"] {
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 50%;
   background: rgba(54, 60, 58, 0.46);
+  cursor: crosshair;
 }
 
 .glyph-cell.is-active {
@@ -301,11 +559,22 @@ input[type="color"] {
     0 0 18px rgba(255, 59, 47, 0.38);
 }
 
+.glyph-cell.is-guide-cell {
+  opacity: 0.35;
+  background: rgba(54, 60, 58, 0.2);
+  cursor: default;
+}
+
 .editor-actions {
-  display: flex;
-  justify-content: end;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 10px;
   min-height: 44px;
+}
+
+.tool-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .stage {
@@ -352,7 +621,6 @@ canvas {
 
   .controls {
     align-items: stretch;
-    flex-wrap: wrap;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
   }
 
@@ -360,13 +628,9 @@ canvas {
     flex: 1 1 190px;
   }
 
-  .controls > .field-wide {
-    max-width: none;
-  }
-
-  .control-grid {
+  .sign-controls,
+  .font-controls {
     grid-template-columns: repeat(3, minmax(120px, 1fr));
-    flex-basis: 100%;
   }
 
   .mode-row {
@@ -376,11 +640,29 @@ canvas {
   .tool-button {
     flex: 1 1 180px;
   }
+
+  .font-global-metrics {
+    grid-template-columns: repeat(3, minmax(120px, 1fr));
+  }
+
+  .editor-title-block {
+    grid-template-columns: 1fr minmax(180px, 1fr) minmax(90px, 120px);
+  }
 }
 
 @media (max-width: 520px) {
-  .control-grid {
+  .sign-controls,
+  .font-controls,
+  .font-global-metrics {
     grid-template-columns: 1fr;
+  }
+
+  .editor-title-block {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-header-actions {
+    justify-content: stretch;
   }
 
   .stage {
@@ -393,6 +675,7 @@ canvas {
 
   .glyph-editor-panel {
     padding: 14px;
+    grid-template-rows: auto auto minmax(230px, 30vh) auto minmax(0, 1fr);
   }
 
   .glyph-grid {
@@ -403,20 +686,29 @@ canvas {
     display: grid;
     grid-template-columns: 1fr;
   }
+
+  .character-create {
+    grid-template-columns: 1fr;
+  }
+
+  .glyph-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .glyph-edit-area {
+    grid-template-columns: 1fr;
+  }
+
+  .glyph-side-panel {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-height: 760px) {
   .glyph-editor-panel {
     gap: 10px;
     padding: 14px;
-  }
-
-  .character-list {
-    gap: 6px;
-  }
-
-  .character-button {
-    min-height: 34px;
+    grid-template-rows: auto auto minmax(220px, 30vh) auto minmax(0, 1fr);
   }
 
   .glyph-grid {

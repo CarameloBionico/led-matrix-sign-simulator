@@ -22,12 +22,14 @@ O foco do modelo e fonte bitmap, nao fonte vetorial. O render final nao deve rei
 
 Um conjunto de caracteres para uma altura especifica deve ser tratado como uma fonte completa.
 
-Hoje o prototipo salva overrides por caractere e altura. A arquitetura final deve evoluir para:
+Hoje o app salva fontes completas dentro de uma biblioteca local. A arquitetura usa:
 
 - `baseFont`: fonte original, normalmente somente leitura.
 - `projectedFont`: fonte gerada a partir da base para uma altura alvo.
 - `activeFont`: fonte usada atualmente pelo letreiro.
 - `fontLibrary`: colecao de fontes base, fontes importadas e fontes customizadas.
+
+Uma familia de fonte agrupa uma ou mais fontes completas em alturas diferentes. A interface principal trabalha por familia; o render escolhe a melhor instancia para a altura ativa.
 
 ### Uma fonte projetada e editavel
 
@@ -53,6 +55,8 @@ O render do letreiro deve receber glifos prontos:
 O render nao deve decidir como uma letra deve ser escalada enquanto desenha a frase. A escala/projecao pertence a etapa de criacao da fonte.
 
 ## Modelo de dados proposto
+
+### Fonte individual
 
 ```json
 {
@@ -115,6 +119,32 @@ O render nao deve decidir como uma letra deve ser escalada enquanto desenha a fr
 }
 ```
 
+### Pacote de familia
+
+O formato principal de importacao/exportacao e a familia inteira:
+
+```json
+{
+  "format": "led-matrix-font-family",
+  "version": 1,
+  "familyId": "custom-led",
+  "familyName": "Custom LED",
+  "exportedAt": "2026-05-16T00:00:00.000Z",
+  "fonts": [
+    {
+      "format": "led-matrix-font",
+      "version": 1,
+      "id": "custom-led-19px",
+      "familyId": "custom-led",
+      "familyName": "Custom LED",
+      "name": "Custom LED - 19px"
+    }
+  ]
+}
+```
+
+Cada item de `fonts` deve ser uma fonte individual valida. Importar uma familia substitui as variacoes customizadas existentes daquela familia. A importacao de uma fonte individual ainda e aceita como compatibilidade.
+
 ## Campos obrigatorios
 
 Para uma fonte ser renderizavel e exportavel, estes campos devem existir:
@@ -162,6 +192,8 @@ Altura total da linha da fonte em LEDs. Define o espaco vertical reservado para 
 
 Linha onde os caracteres "sentam". Maiusculas normalmente terminam perto da baseline. Cedilhas e descendentes podem passar abaixo.
 
+No JSON interno, `baseline` e armazenado como coordenada 0-based a partir do topo para simplificar calculos. Na interface do editor, o campo mostra a posicao visual 1-based: uma baseline interna `12` aparece como `13`, porque a linha e desenhada abaixo da 13a linha de pixels.
+
 ### ascent
 
 Quantidade de LEDs acima da baseline. Normalmente inclui maiusculas e acentos.
@@ -185,6 +217,8 @@ Largura real do bitmap do glifo.
 ### advance
 
 Quanto o cursor anda depois que o glifo e desenhado. Pode ser maior que `width` para criar espaco natural.
+
+Em modo monoespacado, a UI bloqueia o `advance` individual e usa `metrics.defaultAdvance` para todos os glifos. Em modo proporcional, cada glifo pode ter seu proprio `advance`.
 
 ### offsetX
 
@@ -317,13 +351,15 @@ Faltando na fonte: ç, ã, #
 
 ### 7. Exportar/importar
 
-O usuario pode exportar a fonte inteira como JSON. Importar deve validar:
+O usuario pode exportar a familia inteira como JSON. Importar deve validar:
 
 - formato
 - versao
 - metricas obrigatorias
 - integridade dos glifos
 - consistencia entre `width`, `height` e `rows`
+
+O app tambem aceita uma fonte individual antiga e a normaliza para a biblioteca atual.
 
 ## Exportacao para hardware real
 
@@ -352,6 +388,10 @@ Decisao: exportadores de hardware devem ser derivados da fonte validada, nao de 
 - Criar `projectFont(baseFont, options)`.
 - Salvar fontes projetadas no `localStorage`.
 - Substituir overrides por fontes customizadas.
+- Quando uma fonte estiver projetada por altura de letra menor que o letreiro,
+  derivar/materializar uma nova familia com `height` igual a altura do letreiro.
+  Os pixels projetados entram centralizados no canvas completo, deixando linhas
+  editaveis acima e abaixo para acentos, cedilha e ajustes manuais.
 
 ### Fase 3: render por fonte
 
@@ -393,18 +433,21 @@ No momento, o app ja tem:
 - simulador de letreiro LED
 - controles salvos em `localStorage`
 - fonte base 5x7
-- editor visual de caractere para a altura atual
-- overrides por caractere e tamanho salvos em `localStorage`
-
-O proximo passo arquitetural e migrar de overrides soltos para fontes projetadas completas.
+- biblioteca de fontes em `localStorage`
+- editor visual de fonte/glifo em tela inteira
+- derivacao de fonte projetada com nome escolhido pelo usuario
+- salvar como para duplicar uma familia
+- apagar familias customizadas
+- importacao/exportacao de familia inteira
+- modo monoespacado com `advance` bloqueado
+- modo proporcional/adaptado com `advance` por glifo
+- copia/cola de matriz de caractere para criar variantes e acentos
 
 ## Decisoes em aberto
 
 - O editor deve permitir glifos com altura diferente da fonte ou sempre editar dentro de `metrics.height`?
-- Fontes monoespacadas devem forcar `advance` global ou apenas sugerir `defaultAdvance`?
 - Como representar kerning, se algum dia for necessario?
 - O exportador para hardware deve priorizar linhas ou colunas?
-- O app deve armazenar varias fontes no navegador ou exigir export manual?
 - Como lidar com normalizacao Unicode: `Á` precomposto versus `A` + acento combinante?
 
 ## Decisao inicial sobre kerning

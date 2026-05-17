@@ -17,74 +17,86 @@
           </div>
         </div>
 
-        <label class="field field-wide">
-          <span>Frase</span>
-          <input id="messageInput" type="text" value="BEM-VINDO AO LETREIRO LED" maxlength="72" />
-        </label>
+        <div class="controls-stack">
+          <div class="control-row sign-controls">
+            <label class="field field-wide">
+              <span>Frase</span>
+              <input id="messageInput" type="text" value="BEM-VINDO AO LETREIRO LED" maxlength="72" />
+            </label>
 
-        <div class="control-grid">
-          <label class="field">
-            <span>Largura</span>
-            <input id="widthInput" type="number" min="16" max="512" value="88" />
-          </label>
+            <label class="field">
+              <span>Largura</span>
+              <input id="widthInput" type="number" min="16" max="512" value="88" />
+            </label>
 
-          <label class="field">
-            <span>Altura</span>
-            <input id="heightInput" type="number" min="7" max="48" value="19" />
-          </label>
+            <label class="field">
+              <span>Altura</span>
+              <input id="heightInput" type="number" min="7" max="48" value="19" />
+            </label>
 
-          <label class="field">
-            <span>Espacamento</span>
-            <input id="gapInput" type="range" min="1" max="8" value="3" />
-          </label>
+            <label class="field">
+              <span>LED espaco</span>
+              <input id="gapInput" type="range" min="1" max="8" value="3" />
+            </label>
 
-          <label class="field">
-            <span>Tamanho LED</span>
-            <input id="ledSizeInput" type="range" min="4" max="14" value="8" />
-          </label>
+            <label class="field">
+              <span>LED tamanho</span>
+              <input id="ledSizeInput" type="range" min="4" max="14" value="8" />
+            </label>
 
-          <label class="field">
-            <span>Altura da letra</span>
-            <input id="letterHeightInput" type="range" min="45" max="100" value="84" />
-          </label>
+            <label class="field">
+              <span>LED cor</span>
+              <input id="colorInput" type="color" value="#ff3b2f" />
+            </label>
 
-          <label class="field">
-            <span>Espaco letras</span>
-            <input id="letterSpacingInput" type="range" min="0" max="8" value="2" />
-          </label>
+            <label class="field">
+              <span>Letra altura <strong id="letterHeightValue">16px</strong></span>
+              <input id="letterHeightInput" type="range" min="45" max="100" value="84" />
+            </label>
 
-          <label class="field">
-            <span>Fonte</span>
-            <select id="fontInput">
-              <option value="matrix" selected>Matriz LED</option>
-              <option value="system">Arial forte</option>
-              <option value="mono">Monoespacada</option>
-              <option value="serif">Serifada</option>
-            </select>
-          </label>
+            <label class="field">
+              <span>Letra espaco</span>
+              <input id="letterSpacingInput" type="range" min="0" max="8" value="2" disabled />
+            </label>
 
-          <label class="field">
-            <span>Cor</span>
-            <input id="colorInput" type="color" value="#ff3b2f" />
-          </label>
+            <label class="field">
+              <span>Velocidade</span>
+              <input id="speedInput" type="range" min="1" max="12" value="5" />
+            </label>
 
-          <label class="field">
-            <span>Velocidade</span>
-            <input id="speedInput" type="range" min="1" max="12" value="5" />
-          </label>
-        </div>
+            <div class="mode-row" role="radiogroup" aria-label="Modo da frase">
+              <label>
+                <input type="radio" name="mode" value="static" />
+                <span>Estatica</span>
+              </label>
+              <label>
+                <input type="radio" name="mode" value="scroll" checked />
+                <span>Correndo</span>
+              </label>
+            </div>
+          </div>
 
-        <button id="editorOpenButton" class="tool-button" type="button">Editar caracteres</button>
+          <div class="control-row font-controls">
+            <label class="field font-field">
+              <span>Familia de fonte <strong id="fontStatusLabel">Simulada, editar</strong></span>
+              <select id="fontInput">
+                <option value="classic-matrix-5x7" selected>Classic Matrix 5x7</option>
+              </select>
+            </label>
 
-        <div class="mode-row" role="radiogroup" aria-label="Modo da frase">
-          <label>
-            <input type="radio" name="mode" value="static" />
-            <span>Estatica</span>
-          </label>
-          <label>
-            <input type="radio" name="mode" value="scroll" checked />
-            <span>Correndo</span>
-          </label>
+            <label class="field">
+              <span>Altura</span>
+              <input id="fontHeightInput" type="number" readonly />
+            </label>
+
+            <button id="fontDeriveButton" class="tool-button secondary" type="button">Derivar fonte projetada</button>
+            <button id="fontSaveAsMainButton" class="tool-button secondary" type="button">Salvar como</button>
+            <button id="editorOpenButton" class="tool-button" type="button">Editar fonte</button>
+            <button id="fontExportButton" class="tool-button secondary" type="button">Exportar familia</button>
+            <button id="fontImportButton" class="tool-button secondary" type="button">Importar familia</button>
+            <button id="fontDeleteButton" class="tool-button secondary danger" type="button">Apagar fonte</button>
+            <input id="fontImportInput" type="file" accept="application/json,.json" hidden />
+          </div>
         </div>
       </section>
 
@@ -95,22 +107,95 @@
         </div>
       </section>
 
-      <section id="glyphEditor" class="glyph-editor" aria-label="Editor de caracteres" hidden>
+      <section id="glyphEditor" class="glyph-editor" aria-label="Editor de fonte" hidden>
         <div class="glyph-editor-panel">
           <header class="glyph-editor-header">
-            <div>
-              <h2>Editor</h2>
-              <p id="editorSizeLabel"></p>
+            <div class="editor-title-block">
+              <h2>Editor de fonte</h2>
+              <div class="editor-readout editor-family-field">
+                <span>Familia</span>
+                <strong id="fontFamilyNameLabel"></strong>
+              </div>
+              <div class="editor-readout editor-height-field">
+                <span>Altura</span>
+                <strong id="fontEditorHeightLabel"></strong>
+              </div>
             </div>
-            <button id="editorCloseButton" class="icon-button" type="button" aria-label="Fechar">x</button>
+            <div class="editor-header-actions">
+              <button id="fontSaveAsButton" class="tool-button secondary" type="button">Salvar como</button>
+              <button id="editorCloseButton" class="tool-button secondary" type="button">Voltar</button>
+            </div>
           </header>
 
-          <div id="editorCharacterList" class="character-list" aria-label="Caracteres"></div>
-          <div id="editorGrid" class="glyph-grid" aria-label="Matriz do caractere"></div>
+          <div class="font-global-metrics" aria-label="Metricas globais da fonte">
+            <label class="toggle-field">
+              <input id="fontMonospaceInput" type="checkbox" checked />
+              <span>Monoespacada</span>
+            </label>
+            <label class="field">
+              <span>Largura padrao</span>
+              <input id="fontDefaultAdvanceInput" type="number" min="1" max="96" />
+            </label>
+            <label class="field">
+              <span>Baseline</span>
+              <input id="fontBaselineInput" type="number" min="1" max="96" />
+            </label>
+            <label class="field">
+              <span>Ascent</span>
+              <input id="fontAscentInput" type="number" min="0" max="96" />
+            </label>
+            <label class="field">
+              <span>Descent</span>
+              <input id="fontDescentInput" type="number" min="0" max="96" />
+            </label>
+            <label class="field">
+              <span>Cap height</span>
+              <input id="fontCapHeightInput" type="number" min="0" max="96" />
+            </label>
+            <label class="field">
+              <span>X-height</span>
+              <input id="fontXHeightInput" type="number" min="0" max="96" />
+            </label>
+          </div>
 
-          <div class="editor-actions">
-            <button id="editorResetButton" class="tool-button secondary" type="button">Padrao</button>
-            <button id="editorSaveButton" class="tool-button" type="button">Salvar caractere</button>
+          <div id="fontPreview" class="font-preview" aria-label="Pre-visualizacao da fonte"></div>
+
+          <div class="character-create">
+            <input id="editorNewCharacterInput" type="text" maxlength="4" aria-label="Novo caractere" placeholder="Novo caractere" />
+            <button id="editorAddCharacterButton" class="tool-button secondary" type="button">Adicionar</button>
+            <button id="editorCopyCharacterButton" class="tool-button secondary" type="button">Copiar caractere</button>
+            <button id="editorPasteCharacterButton" class="tool-button secondary" type="button" disabled>Colar caractere</button>
+          </div>
+
+          <div class="glyph-edit-area">
+            <div id="editorGrid" class="glyph-grid" aria-label="Matriz do caractere"></div>
+
+            <div class="glyph-side-panel">
+              <div class="glyph-metrics" aria-label="Metricas do glifo">
+                <label class="field">
+                  <span>Largura</span>
+                  <input id="glyphWidthInput" type="number" min="1" max="64" />
+                </label>
+                <label class="field">
+                  <span>Advance</span>
+                  <input id="glyphAdvanceInput" type="number" min="0" max="96" />
+                </label>
+                <label class="field">
+                  <span>Offset X</span>
+                  <input id="glyphOffsetXInput" type="number" min="-32" max="32" />
+                </label>
+                <label class="field">
+                  <span>Offset Y</span>
+                  <input id="glyphOffsetYInput" type="number" min="-32" max="32" />
+                </label>
+              </div>
+
+              <div class="editor-actions">
+                <button id="guideToggleButton" class="tool-button secondary" type="button" aria-pressed="true">Ocultar guias</button>
+                <button id="editorResetButton" class="tool-button secondary" type="button">Padrao</button>
+                <button id="editorSaveButton" class="tool-button" type="button">Salvar caractere</button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
