@@ -579,7 +579,7 @@ function projectFont(baseFont, { targetHeight, familyId = baseFont.familyId, fam
       capHeight: size.height,
       xHeight: Math.max(1, Math.round(size.height * 5 / 7)),
       defaultAdvance: size.width,
-      defaultLetterSpacing: 1,
+      defaultLetterSpacing: baseFont.metrics.defaultLetterSpacing,
       defaultWordSpacing: Math.max(4, Math.round(size.width * 0.8)),
       fallback: baseFont.metrics.fallback,
     },
@@ -721,9 +721,11 @@ function updateControlReadouts(settings = getSettings()) {
   const font = ensureActiveFont(settings);
 
   controls.letterHeightValue.textContent = `${targetHeight}px`;
-  controls.fontHeight.value = activeFontIsProjected && activeSourceFont ? activeSourceFont.metrics.height : font.metrics.height;
+  controls.fontHeight.textContent = activeFontIsProjected && activeSourceFont ? activeSourceFont.metrics.height : font.metrics.height;
   controls.fontStatus.textContent =
     activeFontMode === "projected" ? "Projetada, derivar" : activeFontMode === "simulated" ? "Simulada, editar" : "Exata";
+  controls.fontStatus.dataset.mode = activeFontMode;
+  controls.letterHeightValue.dataset.mode = activeFontMode;
   controls.fontDerive.disabled = !activeFontIsProjected;
   controls.fontDelete.disabled = !fontLibrary.customFonts.some((customFont) => customFont.familyId === font.familyId);
 }
@@ -869,7 +871,7 @@ function deleteActiveFont() {
   }
 
   const confirmed = window.confirm(
-    `Apagar a fonte "${familyName}"? Essa acao remove ${fontsToDelete.length} variacao(oes) salva(s) neste navegador.`,
+    `Apagar a familia "${familyName}"? Essa acao remove ${fontsToDelete.length} variacao(oes) salva(s) neste navegador.`,
   );
 
   if (!confirmed) {

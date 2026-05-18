@@ -8,7 +8,7 @@
   </head>
   <body>
     <main class="app-shell">
-      <section class="controls" aria-label="Configuracoes do letreiro">
+      <header class="app-header">
         <div class="brand-block">
           <span class="status-dot" aria-hidden="true"></span>
           <div>
@@ -16,85 +16,101 @@
             <p>Simulador de matriz luminosa</p>
           </div>
         </div>
+      </header>
 
-        <div class="controls-stack">
-          <div class="control-row sign-controls">
+      <section class="controls" aria-label="Configuracoes do letreiro">
+        <div class="control-panel message-panel">
+          <h2>Mensagem</h2>
+          <div class="panel-fields">
             <label class="field field-wide">
               <span>Frase</span>
               <input id="messageInput" type="text" value="BEM-VINDO AO LETREIRO LED" maxlength="72" />
             </label>
 
-            <label class="field">
-              <span>Largura</span>
-              <input id="widthInput" type="number" min="16" max="512" value="88" />
-            </label>
-
-            <label class="field">
-              <span>Altura</span>
-              <input id="heightInput" type="number" min="7" max="48" value="19" />
-            </label>
-
-            <label class="field">
-              <span>LED espaco</span>
-              <input id="gapInput" type="range" min="1" max="8" value="3" />
-            </label>
-
-            <label class="field">
-              <span>LED tamanho</span>
-              <input id="ledSizeInput" type="range" min="4" max="14" value="8" />
-            </label>
-
-            <label class="field">
-              <span>LED cor</span>
-              <input id="colorInput" type="color" value="#ff3b2f" />
-            </label>
-
-            <label class="field">
-              <span>Letra altura <strong id="letterHeightValue">16px</strong></span>
-              <input id="letterHeightInput" type="range" min="45" max="100" value="84" />
-            </label>
-
-            <label class="field">
-              <span>Letra espaco</span>
-              <input id="letterSpacingInput" type="range" min="0" max="8" value="2" disabled />
-            </label>
-
-            <label class="field">
-              <span>Velocidade</span>
-              <input id="speedInput" type="range" min="1" max="12" value="5" />
-            </label>
-
             <div class="mode-row" role="radiogroup" aria-label="Modo da frase">
               <label>
                 <input type="radio" name="mode" value="static" />
-                <span>Estatica</span>
+                <span>Estática</span>
               </label>
               <label>
                 <input type="radio" name="mode" value="scroll" checked />
                 <span>Correndo</span>
               </label>
             </div>
-          </div>
-
-          <div class="control-row font-controls">
-            <label class="field font-field">
-              <span>Familia de fonte <strong id="fontStatusLabel">Simulada, editar</strong></span>
-              <select id="fontInput">
-                <option value="classic-matrix-5x7" selected>Classic Matrix 5x7</option>
-              </select>
-            </label>
 
             <label class="field">
-              <span>Altura</span>
-              <input id="fontHeightInput" type="number" readonly />
+              <span>Velocidade</span>
+              <input id="speedInput" type="range" min="1" max="12" value="5" />
+            </label>
+          </div>
+        </div>
+
+        <div class="control-panel sign-panel">
+          <h2>Letreiro</h2>
+          <div class="panel-fields">
+            <label class="field sign-size-field">
+              <span>Largura</span>
+              <input id="widthInput" type="number" min="16" max="512" value="88" />
             </label>
 
-            <button id="fontDeriveButton" class="tool-button secondary" type="button">Derivar fonte projetada</button>
-            <button id="fontSaveAsMainButton" class="tool-button secondary" type="button">Salvar como</button>
+            <label class="field sign-size-field">
+              <span>Altura</span>
+              <input id="heightInput" type="number" min="7" max="48" value="19" />
+            </label>
+
+            <input id="gapInput" type="range" min="1" max="8" value="3" hidden />
+
+            <label class="field sign-visual-field">
+              <span>Luminosidade</span>
+              <input id="ledSizeInput" type="range" min="4" max="14" value="8" />
+            </label>
+
+            <label class="field sign-visual-field">
+              <span>LED cor</span>
+              <input id="colorInput" type="color" value="#ff3b2f" />
+            </label>
+          </div>
+        </div>
+
+        <div class="control-panel font-panel">
+          <h2>Fonte</h2>
+          <div class="panel-fields">
+            <div class="font-composite">
+              <div class="font-unity-label" aria-hidden="true">Fonte unica</div>
+              <label class="field font-field">
+                <span>Familia de fonte <strong id="fontStatusLabel">Simulada, editar</strong></span>
+                <select id="fontInput">
+                  <option value="classic-matrix-5x7" selected>Classic Matrix 5x7</option>
+                </select>
+              </label>
+              <span class="font-composite-separator" aria-hidden="true">-</span>
+              <div class="font-height-readout">
+                <span>Altura</span>
+                <strong id="fontHeightInput">16</strong>
+              </div>
+            </div>
+
+            <label class="field">
+              <span>Altura da letra <strong id="letterHeightValue">16px</strong></span>
+              <input id="letterHeightInput" type="range" min="45" max="100" value="84" />
+            </label>
+
+            <input id="letterSpacingInput" type="range" min="0" max="8" value="2" disabled hidden />
+          </div>
+
+          <div class="panel-actions font-actions">
             <button id="editorOpenButton" class="tool-button" type="button">Editar fonte</button>
+            <button id="fontSaveAsMainButton" class="tool-button secondary" type="button">Salvar como</button>
+            <button id="fontDeriveButton" class="tool-button secondary" type="button">Derivar projetada</button>
+            <button id="fontDeleteButton" class="tool-button secondary danger" type="button">Apagar familia</button>
+          </div>
+        </div>
+
+        <div class="control-panel file-panel">
+          <h2>Arquivo</h2>
+          <div class="panel-actions file-actions">
             <button id="fontExportButton" class="tool-button secondary" type="button">Exportar familia</button>
             <button id="fontImportButton" class="tool-button secondary" type="button">Importar familia</button>
-            <button id="fontDeleteButton" class="tool-button secondary danger" type="button">Apagar fonte</button>
             <input id="fontImportInput" type="file" accept="application/json,.json" hidden />
           </div>
         </div>
