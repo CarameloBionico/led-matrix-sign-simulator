@@ -327,7 +327,8 @@ input[type="color"] {
   display: flex;
   flex-wrap: wrap;
   align-items: start;
-  gap: 8px;
+  column-gap: 0;
+  row-gap: 12px;
   overflow-x: hidden;
   overflow-y: auto;
   align-content: start;
@@ -342,7 +343,7 @@ input[type="color"] {
 
 .font-global-metrics {
   display: grid;
-  grid-template-columns: minmax(150px, 0.9fr) repeat(6, minmax(86px, 1fr));
+  grid-template-columns: minmax(150px, 0.9fr) repeat(7, minmax(86px, 1fr));
   gap: 10px;
 }
 
@@ -374,17 +375,16 @@ input[type="color"] {
 
 .preview-glyph {
   display: grid;
-  gap: 3px;
+  gap: 4px;
   min-width: max-content;
-  padding: 3px;
-  border: 1px solid transparent;
-  border-radius: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
   background: transparent;
 }
 
 .preview-glyph.is-active {
-  border-color: #60c2a8;
-  background: rgba(96, 194, 168, 0.1);
+  background: transparent;
 }
 
 .preview-glyph-label {
@@ -404,6 +404,11 @@ input[type="color"] {
   aspect-ratio: 1;
   border-radius: 50%;
   background: rgba(54, 60, 58, 0.45);
+}
+
+.preview-led.is-spacing {
+  border-radius: 0;
+  background: rgba(18, 22, 21, 0.45);
 }
 
 .preview-led.is-active {

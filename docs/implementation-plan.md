@@ -356,7 +356,11 @@ Implementado:
 - Modo monoespacado com `advance` bloqueado por glifo.
 - Modo proporcional/adaptado com `advance` por glifo.
 - Largura padrao editavel para fontes monoespacadas.
+- Espacamento padrao editavel por fonte.
+- Preview de caracteres em letreiro continuo, com colunas de espacamento mais escuras.
 - Copiar e colar matriz de caractere para criar variantes.
+- Adicao de varios caracteres de uma vez pelo campo "Novo caractere".
+- Apagar caractere individual com protecao para espaco e fallback.
 - Cabecalho do editor mostrando familia e altura como leitura.
 
 Ainda pendente:

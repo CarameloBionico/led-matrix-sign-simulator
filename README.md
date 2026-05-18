@@ -13,9 +13,12 @@ O projeto comecou como um simulador simples de frase em matriz LED e evoluiu par
 - Permite duplicar uma fonte com **Salvar como**.
 - Permite apagar familias customizadas salvas no navegador.
 - Permite editar glifos individualmente em uma grade de LEDs.
-- Permite criar novos caracteres Unicode digitaveis, como letras acentuadas, cedilha, `#` ou `_`.
+- Permite criar varios novos caracteres Unicode digitaveis de uma vez.
+- Permite apagar caracteres individuais da fonte, exceto espaco e fallback.
 - Permite copiar e colar a matriz de um caractere para criar variantes com acento.
 - Permite alternar entre fonte monoespacada e proporcional/adaptada.
+- Permite ajustar o espacamento padrao entre letras na fonte.
+- Mostra o preview dos caracteres em um letreiro continuo, com colunas de espacamento destacadas em cor mais escura.
 - Exporta e importa a familia inteira em JSON.
 
 ## Fluxo recomendado
@@ -23,10 +26,11 @@ O projeto comecou como um simulador simples de frase em matriz LED e evoluiu par
 1. Ajuste o tamanho do letreiro e a altura desejada da letra.
 2. Se a fonte estiver projetada, use **Derivar fonte projetada** e escolha um novo nome.
 3. Use **Editar fonte** para ajustar metricas e glifos.
-4. Para criar acentos, selecione uma letra base, copie o caractere, crie o caractere acentuado e cole a matriz.
-5. Desenhe o acento manualmente e salve o caractere.
-6. Use **Salvar como** para criar uma nova familia a partir de uma fonte pronta.
-7. Use **Exportar familia** para gerar backup/compartilhar a familia inteira.
+4. Para criar varios caracteres, digite todos no campo **Novo caractere** e clique em **Adicionar**.
+5. Para criar acentos, selecione uma letra base, copie o caractere, crie ou selecione o caractere acentuado e cole a matriz.
+6. Desenhe o acento manualmente e salve o caractere.
+7. Use **Salvar como** para criar uma nova familia a partir de uma fonte pronta.
+8. Use **Exportar familia** para gerar backup/compartilhar a familia inteira.
 
 ## Monoespacada vs proporcional
 
@@ -39,6 +43,7 @@ Conceitos importantes:
 - `width`: largura real da matriz editavel do glifo.
 - `advance`: quanto o cursor anda depois de desenhar o glifo.
 - `defaultAdvance`: largura/advance padrao usada em modo monoespacado.
+- `defaultLetterSpacing`: quantidade de colunas vazias entre caracteres.
 
 ## Formato de exportacao
 

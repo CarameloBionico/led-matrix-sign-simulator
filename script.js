@@ -17,6 +17,7 @@ const controls = {
   fontEditorHeight: document.querySelector("#fontEditorHeightLabel"),
   fontMonospace: document.querySelector("#fontMonospaceInput"),
   fontDefaultAdvance: document.querySelector("#fontDefaultAdvanceInput"),
+  fontDefaultLetterSpacing: document.querySelector("#fontDefaultLetterSpacingInput"),
   fontSaveAs: document.querySelector("#fontSaveAsButton"),
   fontSaveAsMain: document.querySelector("#fontSaveAsMainButton"),
   color: document.querySelector("#colorInput"),
@@ -736,6 +737,7 @@ function syncGlobalMetricInputs() {
   controls.fontMonospace.checked = font.metrics.mode !== "proportional";
   controls.fontDefaultAdvance.value = font.metrics.defaultAdvance;
   controls.fontDefaultAdvance.max = Math.max(controls.fontDefaultAdvance.max, height * 4, font.metrics.defaultAdvance);
+  controls.fontDefaultLetterSpacing.value = font.metrics.defaultLetterSpacing;
   controls.fontBaseline.min = 1;
   controls.fontBaseline.max = height;
   controls.fontAscent.max = height;
@@ -800,6 +802,21 @@ function updateDefaultAdvance() {
   syncEditorMetricInputs();
   syncGlobalMetricInputs();
   renderEditorGrid();
+  renderFontPreview();
+  markTextDirty();
+}
+
+function updateDefaultLetterSpacing() {
+  const font = ensureActiveFont();
+
+  font.metrics.defaultLetterSpacing = clamp(
+    controls.fontDefaultLetterSpacing.value,
+    controls.fontDefaultLetterSpacing.min,
+    controls.fontDefaultLetterSpacing.max,
+  );
+  font.updatedAt = new Date().toISOString();
+  saveFontLibrary();
+  syncGlobalMetricInputs();
   renderFontPreview();
   markTextDirty();
 }
@@ -993,6 +1010,7 @@ function closeGlyphEditor() {
 function renderFontPreview() {
   const font = ensureActiveFont();
   const characters = Object.keys(font.glyphs).sort((left, right) => left.localeCompare(right, "pt-BR"));
+  const previewSpacing = Math.max(0, font.metrics.defaultLetterSpacing);
 
   controls.fontPreview.replaceChildren(
     ...characters.map((char) => {
@@ -1014,12 +1032,17 @@ function renderFontPreview() {
       label.textContent = char === " " ? "SP" : char;
 
       grid.className = "preview-glyph-grid";
-      grid.style.gridTemplateColumns = `repeat(${glyph.width}, var(--preview-led-size))`;
+      grid.style.gridTemplateColumns = `repeat(${glyph.width + previewSpacing}, var(--preview-led-size))`;
 
       glyph.rows.forEach((row) => {
         [...row].forEach((pixel) => {
           const led = document.createElement("span");
           led.className = `preview-led${pixel === "1" ? " is-active" : ""}`;
+          grid.append(led);
+        });
+        Array.from({ length: previewSpacing }, () => {
+          const led = document.createElement("span");
+          led.className = "preview-led is-spacing";
           grid.append(led);
         });
       });
@@ -1829,6 +1852,7 @@ controls.editorPasteCharacter.addEventListener("click", pasteEditorCharacter);
 controls.editorDeleteCharacter.addEventListener("click", deleteEditorCharacter);
 controls.fontMonospace.addEventListener("change", setFontMonospaceMode);
 controls.fontDefaultAdvance.addEventListener("input", updateDefaultAdvance);
+controls.fontDefaultLetterSpacing.addEventListener("input", updateDefaultLetterSpacing);
 controls.fontSaveAs.addEventListener("click", saveActiveFontAs);
 controls.fontSaveAsMain.addEventListener("click", saveActiveFontAs);
 controls.fontDerive.addEventListener("click", deriveProjectedFont);

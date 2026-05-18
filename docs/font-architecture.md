@@ -220,6 +220,12 @@ Quanto o cursor anda depois que o glifo e desenhado. Pode ser maior que `width` 
 
 Em modo monoespacado, a UI bloqueia o `advance` individual e usa `metrics.defaultAdvance` para todos os glifos. Em modo proporcional, cada glifo pode ter seu proprio `advance`.
 
+### defaultLetterSpacing
+
+Quantidade de colunas vazias adicionadas entre caracteres durante o render. O editor expoe esse valor como **Espacamento padrao**.
+
+No preview da fonte, esse espacamento aparece como colunas apagadas mais escuras em um letreiro continuo. Isso evita confundir espacamento com aumento real da largura do glifo.
+
 ### offsetX
 
 Deslocamento horizontal do bitmap em relacao ao cursor.
@@ -330,7 +336,10 @@ Para cada caractere, o usuario pode:
 - alterar offsetX/offsetY
 - ajustar anchors
 - clonar outro caractere
+- apagar caracteres individuais, exceto espaco e fallback
 - resetar para a projecao original
+
+O campo de novo caractere aceita varios caracteres de uma vez. O app cria todos os glifos faltantes e seleciona o ultimo da sequencia.
 
 ### 5. Gerar caracteres derivados
 
@@ -442,6 +451,9 @@ No momento, o app ja tem:
 - modo monoespacado com `advance` bloqueado
 - modo proporcional/adaptado com `advance` por glifo
 - copia/cola de matriz de caractere para criar variantes e acentos
+- adicao de varios caracteres de uma vez
+- exclusao de caracteres individuais com protecao para espaco e fallback
+- espacamento padrao editavel com preview visual em letreiro continuo
 
 ## Decisoes em aberto
 
