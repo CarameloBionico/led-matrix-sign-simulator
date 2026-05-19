@@ -1,34 +1,34 @@
-# Plano de execucao
+# Plano de execução
 
-Este plano transforma a arquitetura de fontes bitmap em uma sequencia de implementacao incremental. A meta e preservar o prototipo funcional enquanto o sistema migra para fontes completas, editaveis, importaveis e exportaveis.
+Este plano transforma a arquitetura de fontes bitmap em uma sequência de implementação incremental. A meta é preservar o protótipo funcional enquanto o sistema migra para fontes completas, editáveis, importáveis e exportáveis.
 
 Documento relacionado: [Arquitetura de fontes bitmap](font-architecture.md).
 
-## Principios de execucao
+## Princípios de execução
 
-1. Manter o simulador utilizavel a cada fase.
+1. Manter o simulador utilizável a cada fase.
 2. Evitar reescrever UI, render e armazenamento ao mesmo tempo.
 3. Migrar primeiro o modelo de dados, depois o editor, depois import/export.
 4. Preferir compatibilidade com os dados atuais do `localStorage`.
 5. Validar cada fase com uma frase real no letreiro e com caracteres editados.
 
-## Fase 0: estabilizar o prototipo atual
+## Fase 0: estabilizar o protótipo atual
 
-Objetivo: deixar o estado atual pronto para uma refatoracao maior.
+Objetivo: deixar o estado atual pronto para uma refatoração maior.
 
-Entregaveis:
+Entregáveis:
 
-- Corrigir layout final do editor, se ainda houver sobreposicao em alguma altura.
-- Remover codigo morto que sobrou de testes de fontes alternativas.
-- Separar constantes da fonte 5x7 do restante da logica.
-- Criar pequenas funcoes de utilidade para matriz bitmap.
+- Corrigir layout final do editor, se ainda houver sobreposição em alguma altura.
+- Remover código morto que sobrou de testes de fontes alternativas.
+- Separar constantes da fonte 5x7 do restante da lógica.
+- Criar pequenas funções de utilidade para matriz bitmap.
 
-Arquivos provaveis:
+Arquivos prováveis:
 
 - `script.js`
 - `styles.css`
 
-Criterios de aceite:
+Critérios de aceite:
 
 - O app abre sem erro.
 - Controles continuam salvos.
@@ -39,12 +39,12 @@ Criterios de aceite:
 
 Objetivo: introduzir o formato formal de fonte sem mudar radicalmente a interface.
 
-Entregaveis:
+Entregáveis:
 
 - Criar um objeto `baseFont5x7` no formato novo.
 - Criar estrutura `fontStore`.
 - Criar `activeFont`.
-- Criar validadores basicos:
+- Criar validadores básicos:
   - `isValidFont(font)`
   - `isValidGlyph(glyph)`
   - `normalizeGlyph(glyph)`
@@ -53,11 +53,11 @@ Entregaveis:
   - `getFallbackGlyph(font)`
   - `getFontCharacters(font)`
 
-Arquivos provaveis:
+Arquivos prováveis:
 
 - `script.js`
 
-Criterios de aceite:
+Critérios de aceite:
 
 - A fonte 5x7 atual existe como fonte formal.
 - O render ainda pode funcionar com a fonte antiga ou com uma camada adaptadora.
@@ -65,9 +65,9 @@ Criterios de aceite:
 
 ## Fase 2: projetar fonte para altura alvo
 
-Objetivo: mover a escala para uma etapa de criacao de fonte, nao para o render.
+Objetivo: mover a escala para uma etapa de criação de fonte, não para o render.
 
-Entregaveis:
+Entregáveis:
 
 - Criar `projectFont(baseFont, options)`.
 - Projetar todos os glifos base para:
@@ -77,26 +77,26 @@ Entregaveis:
   - `defaultLetterSpacing`
   - `defaultWordSpacing`
 - Gerar `width`, `height`, `advance`, `offsetX`, `offsetY`, `rows` por glifo.
-- Criar um identificador estavel para fonte projetada.
+- Criar um identificador estável para fonte projetada.
 
-Decisoes iniciais:
+Decisões iniciais:
 
-- A base 5x7 deve continuar sendo a fonte mae.
-- A projecao inicial deve usar escala por intervalos proporcionais.
-- Para fonte monoespacada, `advance` deve ser igual para todos os glifos.
+- A base 5x7 deve continuar sendo a fonte mãe.
+- A projeção inicial deve usar escala por intervalos proporcionais.
+- Para fonte monoespaçada, `advance` deve ser igual para todos os glifos.
 - Para fonte proporcional, `advance` pode ser derivado de `width + 1`.
 
-Criterios de aceite:
+Critérios de aceite:
 
 - Altura 7 e 14 continuam boas.
-- Altura 15/16 gera uma fonte real, nao um override solto.
-- O render usa uma fonte projetada em memoria.
+- Altura 15/16 gera uma fonte real, não um override solto.
+- O render usa uma fonte projetada em memória.
 
 ## Fase 3: renderizar somente a partir de `activeFont`
 
 Objetivo: simplificar o render para desenhar glifos prontos.
 
-Entregaveis:
+Entregáveis:
 
 - Trocar `renderMatrixTextMap` para usar:
   - `activeFont.metrics`
@@ -115,7 +115,7 @@ y = topOffset + glyph.offsetY
 cursor += glyph.advance + activeFont.metrics.defaultLetterSpacing
 ```
 
-Criterios de aceite:
+Critérios de aceite:
 
 - A frase renderiza igual ou melhor que antes.
 - Caracteres editados aparecem no letreiro.
@@ -125,16 +125,16 @@ Criterios de aceite:
 
 Objetivo: migrar o armazenamento atual para o conceito de fonte.
 
-Entregaveis:
+Entregáveis:
 
 - Criar `loadFontLibrary()`.
 - Criar `saveFontLibrary()`.
 - Migrar `ledMatrixCustomGlyphs` para uma fonte projetada se existir dado antigo.
 - Salvar fontes customizadas em uma chave nova:
   - `ledMatrixFontLibrary`
-- Manter leitura da chave antiga apenas como migracao.
+- Manter leitura da chave antiga apenas como migração.
 
-Fluxo de migracao:
+Fluxo de migração:
 
 1. Ler configurações atuais.
 2. Calcular altura ativa.
@@ -142,19 +142,19 @@ Fluxo de migracao:
 4. Aplicar overrides antigos como glifos editados.
 5. Salvar como fonte customizada.
 
-Criterios de aceite:
+Critérios de aceite:
 
-- Quem ja editou caracteres nao perde edicoes.
-- Depois da migracao, o render nao depende de `ledMatrixCustomGlyphs`.
+- Quem já editou caracteres não perde edições.
+- Depois da migração, o render não depende de `ledMatrixCustomGlyphs`.
 
 ## Fase 5: editor passa a editar a fonte ativa
 
 Objetivo: o editor deixa de editar apenas "caractere na altura atual" e passa a editar um glifo dentro da fonte ativa.
 
-Entregaveis:
+Entregáveis:
 
 - Lista de caracteres vem de `activeFont.glyphs`.
-- Botao para adicionar caractere novo.
+- Botão para adicionar caractere novo.
 - Editor mostra:
   - caractere
   - largura
@@ -164,19 +164,19 @@ Entregaveis:
   - offsetY
 - Grade edita `glyph.rows`.
 - Salvar altera `activeFont.glyphs[char]`.
-- Resetar volta para a projecao original, se houver `sourceFontId`.
+- Resetar volta para a projeção original, se houver `sourceFontId`.
 
-Criterios de aceite:
+Critérios de aceite:
 
 - Editar `A` altera a fonte ativa.
-- Editar `Ç`, `_`, `*`, `#` e outros caracteres e possivel.
+- Editar `Ç`, `_`, `*`, `#` e outros caracteres é possível.
 - O letreiro atualiza usando a fonte ativa.
 
-## Fase 6: metricas visuais e linhas-guia
+## Fase 6: métricas visuais e linhas-guia
 
-Objetivo: tornar baseline, ascent, descent, capHeight e xHeight visiveis e ajustaveis.
+Objetivo: tornar baseline, ascent, descent, capHeight e xHeight visíveis e ajustáveis.
 
-Entregaveis:
+Entregáveis:
 
 - Mostrar linhas no editor:
   - topo da fonte
@@ -193,19 +193,19 @@ Entregaveis:
   - `descent`
   - `capHeight`
   - `xHeight`
-- Atualizar visual dos glifos quando metricas mudarem.
+- Atualizar visual dos glifos quando métricas mudarem.
 
-Criterios de aceite:
+Critérios de aceite:
 
-- Usuario entende onde a letra senta.
+- Usuário entende onde a letra senta.
 - Acentos e cedilha podem ser posicionados com previsibilidade.
-- Mudancas globais nao destroem glifos sem confirmacao.
+- Mudanças globais não destroem glifos sem confirmação.
 
 ## Fase 7: anchors por glifo
 
-Objetivo: permitir composicao inteligente de acentos e marcas.
+Objetivo: permitir composição inteligente de acentos e marcas.
 
-Entregaveis:
+Entregáveis:
 
 - Mostrar anchors como marcadores na grade.
 - Permitir editar anchors:
@@ -216,17 +216,17 @@ Entregaveis:
   - outros customizados
 - Salvar anchors em `glyph.anchors`.
 
-Criterios de aceite:
+Critérios de aceite:
 
 - `A` possui anchor `accent`.
 - `C` possui anchor `cedilla`.
-- Anchors sao exportados no JSON.
+- Anchors são exportados no JSON.
 
-## Fase 8: composicao de caracteres
+## Fase 8: composição de caracteres
 
 Objetivo: gerar acentos e cedilha a partir de base + marca.
 
-Entregaveis:
+Entregáveis:
 
 - Criar glifos de marca:
   - agudo
@@ -236,93 +236,93 @@ Entregaveis:
   - trema
   - cedilha
 - Criar `composeGlyph(baseGlyph, markGlyph, anchor)`.
-- Adicionar acoes:
-  - gerar acentos para maiusculas
-  - gerar acentos para minusculas
+- Adicionar ações:
+  - gerar acentos para maiúsculas
+  - gerar acentos para minúsculas
   - gerar cedilha
-- Salvar resultado como glifo final editavel.
+- Salvar resultado como glifo final editável.
 
-Criterios de aceite:
+Critérios de aceite:
 
 - Gerar `Á`, `À`, `Â`, `Ã`, `É`, `Ê`, `Ç`.
 - Resultado aparece na lista e pode ser editado manualmente.
 
 ## Fase 9: importar e exportar JSON
 
-Objetivo: permitir backup, compartilhamento e preparacao para hardware.
+Objetivo: permitir backup, compartilhamento e preparação para hardware.
 
-Entregaveis:
+Entregáveis:
 
-- Botao exportar familia ativa.
+- Botão exportar família ativa.
 - Download de JSON com pacote `led-matrix-font-family`.
-- Botao importar familia JSON.
-- Validador de importacao.
+- Botão importar família JSON.
+- Validador de importação.
 - Tratamento de conflito de `id`.
-- Compatibilidade com JSON antigo de fonte unica.
+- Compatibilidade com JSON antigo de fonte única.
 
-Criterios de aceite:
+Critérios de aceite:
 
-- Exportar uma familia editada.
+- Exportar uma família editada.
 - Recarregar/importar em outro navegador.
-- A familia importada renderiza igual.
+- A família importada renderiza igual.
 
 ## Fase 10: exportadores para hardware
 
 Objetivo: transformar a fonte validada em formatos praticos para letreiros reais.
 
-Entregaveis:
+Entregáveis:
 
 - Exportador C/C++ row-major.
 - Exportador C/C++ column-major.
 - Exportador hex por linha.
 - Opcao de incluir ou omitir metadados.
-- Documentar orientacao de bits.
+- Documentar orientação de bits.
 
-Criterios de aceite:
+Critérios de aceite:
 
 - Um glifo exportado bate visualmente com a grade.
 - O formato explicita largura, altura e advance.
-- Nao ha dependencia de estado visual temporario.
+- Não há dependência de estado visual temporário.
 
 ## Riscos e cuidados
 
 ### Layout do editor
 
-O editor ja mostrou que tamanhos dinamicos podem sobrepor areas. A regra daqui para frente:
+O editor já mostrou que tamanhos dinâmicos podem sobrepor áreas. A regra daqui para frente:
 
-- medir espaco real quando necessario;
-- manter lista, grid e rodape em regioes separadas;
+- medir espaço real quando necessário;
+- manter lista, grid e rodapé em regiões separadas;
 - evitar scroll interno confuso;
-- preferir reducao de tamanho de celula a corte de conteudo.
+- preferir redução de tamanho de célula a corte de conteúdo.
 
 ### Unicode
 
-Unicode pode aparecer como caractere precomposto (`Á`) ou combinacao (`A` + acento combinante). A primeira versao deve priorizar precompostos e documentar que composicao combinante sera normalizada depois.
+Unicode pode aparecer como caractere precomposto (`Á`) ou combinação (`A` + acento combinante). A primeira versão deve priorizar precompostos e documentar que composição combinante será normalizada depois.
 
 ### Compatibilidade
 
-O formato exportado precisa ter `version`. Mudancas futuras devem migrar versoes antigas, nao quebrar importacao.
+O formato exportado precisa ter `version`. Mudanças futuras devem migrar versões antigas, não quebrar importação.
 
 ### Hardware real
 
 Antes dos exportadores finais, precisamos decidir:
 
-- orientacao de linhas/colunas;
+- orientação de linhas/colunas;
 - ordem dos bits;
 - se o primeiro bit representa topo/esquerda;
 - como codificar `advance`, `offsetX` e `offsetY`.
 
 ## Ordem recomendada imediata
 
-1. Fase 0: estabilizar prototipo.
+1. Fase 0: estabilizar protótipo.
 2. Fase 1: criar modelo formal de fonte.
 3. Fase 2: criar `projectFont`.
 4. Fase 3: renderizar via `activeFont`.
 5. Fase 4: migrar armazenamento.
 
-So depois disso vale investir em import/export e acentos, porque eles dependem de a fonte ja ser uma entidade completa.
+Só depois disso vale investir em import/export e acentos, porque eles dependem de a fonte já ser uma entidade completa.
 
-## Progresso da primeira implementacao
+## Progresso da primeira implementação
 
 Implementado:
 
@@ -332,41 +332,52 @@ Implementado:
 - `projectFont(baseFont, options)` para gerar fonte projetada a partir da 5x7.
 - Render da fonte matriz usando glifos prontos da `activeFont`.
 - Editor salvando glifos dentro da fonte ativa.
-- Adicao manual de novos caracteres digitaveis no editor.
-- Migracao inicial da chave antiga `ledMatrixCustomGlyphs` para a biblioteca de fontes.
-- Exportacao JSON da familia ativa.
-- Importacao JSON de familia com validacao estrutural.
-- Compatibilidade de importacao com JSON antigo de fonte unica.
-- Render preservando caracteres Unicode quando a fonte ativa possui o glifo, com fallback para normalizacao quando nao possui.
+- Adição manual de novos caracteres digitáveis no editor.
+- Migração inicial da chave antiga `ledMatrixCustomGlyphs` para a biblioteca de fontes.
+- Exportação JSON da família ativa.
+- Importação JSON de família com validação estrutural.
+- Compatibilidade de importação com JSON antigo de fonte única.
+- Render preservando caracteres Unicode quando a fonte ativa possui o glifo, com fallback para normalização quando não possui.
 - Editor com controles iniciais de `width`, `advance`, `offsetX` e `offsetY` por glifo.
 - Redimensionamento horizontal do bitmap preservando pixels existentes.
 - Editor renomeado para "Editar fonte" e aberto em tela inteira.
 - Preview visual de todos os glifos cadastrados em formato de letreiro.
-- Guias visuais iniciais de baseline e advance no display do glifo em edicao.
-- Preview de fonte com quebra em multiplas linhas.
-- Correcao do `clamp` para aceitar zero com ranges negativos.
+- Guias visuais iniciais de baseline e advance no display do glifo em edição.
+- Preview de fonte com quebra em múltiplas linhas.
+- Correção do `clamp` para aceitar zero com ranges negativos.
 - Controles globais iniciais de `baseline`, `ascent`, `descent`, `capHeight` e `xHeight`.
-- Acao de derivacao de fonte projetada com nome escolhido pelo usuario.
-- Derivacao/materializacao de fonte projetada em canvas de altura total do letreiro,
-  preservando a letra menor com espacos editaveis acima e abaixo.
-- Reorganizacao dos controles principais em linha de letreiro e linha de fonte.
-- Salvar como para duplicar a familia ativa com novo nome.
-- Apagar familias customizadas salvas no navegador.
-- Reparacao de familias antigas que corrompiam o nome visivel da fonte base.
-- Modo monoespacado com `advance` bloqueado por glifo.
+- Ação de derivação de fonte projetada com nome escolhido pelo usuário.
+- Derivação/materialização de fonte projetada em canvas de altura total do letreiro,
+  preservando a letra menor com espaços editáveis acima e abaixo.
+- Reorganização dos controles principais em linha de letreiro e linha de fonte.
+- Salvar como para duplicar a família ativa com novo nome.
+- Apagar famílias customizadas salvas no navegador.
+- Reparação de famílias antigas que corrompiam o nome visível da fonte base.
+- Modo monoespaçado com `advance` bloqueado por glifo.
 - Modo proporcional/adaptado com `advance` por glifo.
-- Largura padrao editavel para fontes monoespacadas.
-- Espacamento padrao editavel por fonte.
-- Preview de caracteres em letreiro continuo, com colunas de espacamento mais escuras.
+- Largura padrão editável para fontes monoespaçadas.
+- Espaçamento padrão editável por fonte.
+- Preview de caracteres em letreiro contínuo, com colunas de espaçamento mais escuras.
 - Copiar e colar matriz de caractere para criar variantes.
-- Adicao de varios caracteres de uma vez pelo campo "Novo caractere".
-- Apagar caractere individual com protecao para espaco e fallback.
-- Cabecalho do editor mostrando familia e altura como leitura.
+- Adição de vários caracteres de uma vez por janela aberta pelo botão `+` no fim do preview de caracteres.
+- Apagar caractere individual com proteção para espaço e fallback.
+- Cabeçalho do editor mostrando família e altura como leitura.
+- Layout do editor reorganizado com:
+  - título da fonte centralizado no topo;
+  - caracteres logo abaixo do cabeçalho;
+  - parâmetros gerais da fonte ao lado do editor de caractere;
+  - toolbox por ícones para salvar, linhas-guia, undo/redo, copiar/colar, resetar e apagar.
+- Undo/redo de edições de pixels no glifo ativo.
+- Responsividade calibrada para:
+  - evitar clipping do editor de caractere;
+  - evitar barras de rolagem duplicadas;
+  - reduzir campos/ícones junto com o grid antes de empilhar;
+  - manter linhas-guia alinhadas ao gap real da grade.
 
 Ainda pendente:
 
 - Seletor visual de fontes salvas/importadas.
 - Redimensionamento vertical controlado do glifo, se decidirmos permitir glifos com altura diferente da fonte.
-- Anchors editaveis.
-- Composicao de acentos e cedilha.
-- Exportadores especificos para hardware.
+- Anchors editáveis.
+- Composição de acentos e cedilha.
+- Exportadores específicos para hardware.

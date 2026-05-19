@@ -1,6 +1,6 @@
 # Arquitetura de fontes bitmap para letreiro LED
 
-Este documento registra as decisoes de produto e arquitetura para transformar o simulador em um editor/exportador de fontes bitmap para letreiros LED reais.
+Este documento registra as decisões de produto e arquitetura para transformar o simulador em um editor/exportador de fontes bitmap para letreiros LED reais.
 
 ## Objetivo
 
@@ -8,32 +8,32 @@ O sistema deve permitir que uma pessoa:
 
 1. Escolha uma fonte base existente.
 2. Projete essa fonte para uma altura de letra adequada ao letreiro atual.
-3. Ajuste metricas globais da fonte projetada.
+3. Ajuste métricas globais da fonte projetada.
 4. Edite glifos individualmente em uma grade de LEDs.
-5. Crie caracteres acentuados, cedilha, simbolos e outros caracteres Unicode.
+5. Crie caracteres acentuados, cedilha, símbolos e outros caracteres Unicode.
 6. Teste a fonte no simulador.
-7. Exporte e importe a fonte para reutilizacao ou uso em hardware real.
+7. Exporte e importe a fonte para reutilização ou uso em hardware real.
 
-O foco do modelo e fonte bitmap, nao fonte vetorial. O render final nao deve reinterpretar contornos nem rasterizar fontes do sistema. Ele deve apenas desenhar glifos bitmap ja definidos.
+O foco do modelo é fonte bitmap, não fonte vetorial. O render final não deve reinterpretar contornos nem rasterizar fontes do sistema. Ele deve apenas desenhar glifos bitmap já definidos.
 
-## Decisoes principais
+## Decisões principais
 
-### Fonte, nao override solto
+### Fonte, não override solto
 
-Um conjunto de caracteres para uma altura especifica deve ser tratado como uma fonte completa.
+Um conjunto de caracteres para uma altura específica deve ser tratado como uma fonte completa.
 
 Hoje o app salva fontes completas dentro de uma biblioteca local. A arquitetura usa:
 
 - `baseFont`: fonte original, normalmente somente leitura.
 - `projectedFont`: fonte gerada a partir da base para uma altura alvo.
 - `activeFont`: fonte usada atualmente pelo letreiro.
-- `fontLibrary`: colecao de fontes base, fontes importadas e fontes customizadas.
+- `fontLibrary`: coleção de fontes base, fontes importadas e fontes customizadas.
 
-Uma familia de fonte agrupa uma ou mais fontes completas em alturas diferentes. A interface principal trabalha por familia; o render escolhe a melhor instancia para a altura ativa.
+Uma família de fonte agrupa uma ou mais fontes completas em alturas diferentes. A interface principal trabalha por família; o render escolhe a melhor instancia para a altura ativa.
 
-### Uma fonte projetada e editavel
+### Uma fonte projetada é editável
 
-Ao escolher uma fonte base e uma altura, o sistema deve gerar uma nova fonte bitmap naquela altura. Essa fonte gerada vira o material editavel.
+Ao escolher uma fonte base e uma altura, o sistema deve gerar uma nova fonte bitmap naquela altura. Essa fonte gerada vira o material editável.
 
 Exemplo:
 
@@ -41,7 +41,7 @@ Exemplo:
 - Altura alvo: `16`
 - Fonte gerada: `classic-5x7-projected-11x16`
 
-Depois da geracao, o usuario pode editar qualquer glifo sem alterar a fonte base.
+Depois da geração, o usuário pode editar qualquer glifo sem alterar a fonte base.
 
 ### Render simples
 
@@ -49,10 +49,10 @@ O render do letreiro deve receber glifos prontos:
 
 - `rows` define quais LEDs acendem.
 - `offsetX` e `offsetY` posicionam o bitmap.
-- `advance` move o cursor para o proximo caractere.
-- `defaultLetterSpacing` adiciona espaco global se desejado.
+- `advance` move o cursor para o próximo caractere.
+- `defaultLetterSpacing` adiciona espaço global se desejado.
 
-O render nao deve decidir como uma letra deve ser escalada enquanto desenha a frase. A escala/projecao pertence a etapa de criacao da fonte.
+O render não deve decidir como uma letra deve ser escalada enquanto desenha a frase. A escala/projeção pertence a etapa de criação da fonte.
 
 ## Modelo de dados proposto
 
@@ -65,7 +65,7 @@ O render nao deve decidir como uma letra deve ser escalada enquanto desenha a fr
   "id": "custom-16",
   "name": "Custom 16",
   "description": "Fonte bitmap para letreiro LED",
-  "author": "Usuario",
+  "author": "Usuário",
   "license": "custom",
   "sourceFontId": "classic-5x7",
   "encoding": "unicode",
@@ -119,9 +119,9 @@ O render nao deve decidir como uma letra deve ser escalada enquanto desenha a fr
 }
 ```
 
-### Pacote de familia
+### Pacote de família
 
-O formato principal de importacao/exportacao e a familia inteira:
+O formato principal de importação/exportação é a família inteira:
 
 ```json
 {
@@ -143,11 +143,11 @@ O formato principal de importacao/exportacao e a familia inteira:
 }
 ```
 
-Cada item de `fonts` deve ser uma fonte individual valida. Importar uma familia substitui as variacoes customizadas existentes daquela familia. A importacao de uma fonte individual ainda e aceita como compatibilidade.
+Cada item de `fonts` deve ser uma fonte individual válida. Importar uma família substitui as variações customizadas existentes daquela família. A importação de uma fonte individual ainda é aceita como compatibilidade.
 
-## Campos obrigatorios
+## Campos obrigatórios
 
-Para uma fonte ser renderizavel e exportavel, estes campos devem existir:
+Para uma fonte ser renderizável e exportável, estes campos devem existir:
 
 - `format`
 - `version`
@@ -167,9 +167,9 @@ Para uma fonte ser renderizavel e exportavel, estes campos devem existir:
 - `glyphs[char].offsetY`
 - `glyphs[char].rows`
 
-## Campos importantes desde o inicio
+## Campos importantes desde o início
 
-Mesmo que a primeira UI nao edite tudo, o formato deve nascer com suporte para:
+Mesmo que a primeira UI não edite tudo, o formato deve nascer com suporte para:
 
 - `metrics.ascent`
 - `metrics.descent`
@@ -180,23 +180,23 @@ Mesmo que a primeira UI nao edite tudo, o formato deve nascer com suporte para:
 - `glyphs[char].codepoint`
 - `composites`
 
-Esses campos permitem acentos, cedilha, minusculas, simbolos e outros alfabetos sem quebrar o formato depois.
+Esses campos permitem acentos, cedilha, minúsculas, símbolos e outros alfabetos sem quebrar o formato depois.
 
-## Conceitos de metrica
+## Conceitos de métrica
 
 ### height
 
-Altura total da linha da fonte em LEDs. Define o espaco vertical reservado para renderizar texto.
+Altura total da linha da fonte em LEDs. Define o espaço vertical reservado para renderizar texto.
 
 ### baseline
 
-Linha onde os caracteres "sentam". Maiusculas normalmente terminam perto da baseline. Cedilhas e descendentes podem passar abaixo.
+Linha onde os caracteres "sentam". Maiúsculas normalmente terminam perto da baseline. Cedilhas e descendentes podem passar abaixo.
 
-No JSON interno, `baseline` e armazenado como coordenada 0-based a partir do topo para simplificar calculos. Na interface do editor, o campo mostra a posicao visual 1-based: uma baseline interna `12` aparece como `13`, porque a linha e desenhada abaixo da 13a linha de pixels.
+No JSON interno, `baseline` é armazenado como coordenada 0-based a partir do topo para simplificar cálculos. Na interface do editor, o campo mostra a posição visual 1-based: uma baseline interna `12` aparece como `13`, porque a linha é desenhada abaixo da 13a linha de pixels.
 
 ### ascent
 
-Quantidade de LEDs acima da baseline. Normalmente inclui maiusculas e acentos.
+Quantidade de LEDs acima da baseline. Normalmente inclui maiúsculas e acentos.
 
 ### descent
 
@@ -204,11 +204,11 @@ Quantidade de LEDs abaixo da baseline. Usado por cedilha, `g`, `p`, `q`, `y` e m
 
 ### capHeight
 
-Altura visual das maiusculas sem acento, como `A`, `B`, `M`.
+Altura visual das maiúsculas sem acento, como `A`, `B`, `M`.
 
 ### xHeight
 
-Altura visual de minusculas como `x`, `a`, `e`, quando a fonte tiver minusculas.
+Altura visual de minúsculas como `x`, `a`, `e`, quando a fonte tiver minúsculas.
 
 ### width
 
@@ -216,19 +216,19 @@ Largura real do bitmap do glifo.
 
 ### advance
 
-Quanto o cursor anda depois que o glifo e desenhado. Pode ser maior que `width` para criar espaco natural.
+Quanto o cursor anda depois que o glifo é desenhado. Pode ser maior que `width` para criar espaço natural.
 
-Em modo monoespacado, a UI bloqueia o `advance` individual e usa `metrics.defaultAdvance` para todos os glifos. Em modo proporcional, cada glifo pode ter seu proprio `advance`.
+Em modo monoespaçado, a UI bloqueia o `advance` individual e usa `metrics.defaultAdvance` para todos os glifos. Em modo proporcional, cada glifo pode ter seu próprio `advance`.
 
 ### defaultLetterSpacing
 
-Quantidade de colunas vazias adicionadas entre caracteres durante o render. O editor expoe esse valor como **Espacamento padrao**.
+Quantidade de colunas vazias adicionadas entre caracteres durante o render. O editor expõe esse valor como **Espaçamento padrão**.
 
-No preview da fonte, esse espacamento aparece como colunas apagadas mais escuras em um letreiro continuo. Isso evita confundir espacamento com aumento real da largura do glifo.
+No preview da fonte, esse espaçamento aparece como colunas apagadas mais escuras em um letreiro contínuo. Isso evita confundir espaçamento com aumento real da largura do glifo.
 
 ### offsetX
 
-Deslocamento horizontal do bitmap em relacao ao cursor.
+Deslocamento horizontal do bitmap em relação ao cursor.
 
 ### offsetY
 
@@ -236,12 +236,12 @@ Deslocamento vertical do bitmap dentro da linha da fonte.
 
 ### anchors
 
-Pontos de encaixe para composicao visual. Exemplos:
+Pontos de encaixe para composição visual. Exemplos:
 
-- `accent`: posicao para acento acima.
-- `cedilla`: posicao para cedilha abaixo.
-- `top`: topo optico do glifo.
-- `center`: centro optico.
+- `accent`: posição para acento acima.
+- `cedilla`: posição para cedilha abaixo.
+- `top`: topo óptico do glifo.
+- `center`: centro óptico.
 
 ## Unicode e caracteres especiais
 
@@ -261,13 +261,13 @@ O formato deve usar chaves Unicode nos glifos:
 }
 ```
 
-O editor deve permitir adicionar qualquer caractere digitavel. Para caracteres compostos, a fonte pode ter:
+O editor deve permitir adicionar qualquer caractere digitável. Para caracteres compostos, a fonte pode ter:
 
 1. Um glifo final desenhado manualmente.
 2. Uma regra em `composites`.
 3. Ambos, com o glifo manual tendo prioridade no render/export.
 
-## Composicao de acentos
+## Composição de acentos
 
 Caracteres compostos podem ser gerados a partir de uma base e marcas.
 
@@ -282,16 +282,16 @@ O fluxo recomendado:
 
 1. Gerar o caractere composto usando anchors.
 2. Criar um glifo bitmap final.
-3. Permitir edicao manual do resultado.
+3. Permitir edição manual do resultado.
 4. Salvar o glifo final na fonte.
 
 Assim, a regra ajuda a criar, mas o hardware recebe um mapa pronto e simples.
 
-## Jornada do usuario
+## Jornada do usuário
 
 ### 1. Escolher fonte base
 
-O usuario escolhe uma fonte disponivel na biblioteca:
+O usuário escolhe uma fonte disponível na biblioteca:
 
 - `classic-5x7`
 - fontes futuras importadas
@@ -299,20 +299,20 @@ O usuario escolhe uma fonte disponivel na biblioteca:
 
 ### 2. Projetar fonte
 
-O usuario escolhe altura alvo e parametros iniciais:
+O usuário escolhe altura alvo e parâmetros iniciais:
 
 - altura da fonte
 - baseline
 - ascent/descent
 - capHeight/xHeight
-- modo proporcional ou monoespacado
-- advance padrao
-- espaco entre letras
-- espaco entre palavras
+- modo proporcional ou monoespaçado
+- advance padrão
+- espaço entre letras
+- espaço entre palavras
 
 O sistema cria uma fonte projetada.
 
-### 3. Ajustar metricas globais
+### 3. Ajustar métricas globais
 
 O editor mostra linhas-guia:
 
@@ -324,11 +324,11 @@ O editor mostra linhas-guia:
 - descent
 - limite inferior
 
-Essas guias devem ser visuais e ajustaveis.
+Essas guias devem ser visuais e ajustáveis.
 
 ### 4. Editar glifos
 
-Para cada caractere, o usuario pode:
+Para cada caractere, o usuário pode:
 
 - clicar LEDs para acender/apagar
 - alterar largura
@@ -336,19 +336,19 @@ Para cada caractere, o usuario pode:
 - alterar offsetX/offsetY
 - ajustar anchors
 - clonar outro caractere
-- apagar caracteres individuais, exceto espaco e fallback
-- resetar para a projecao original
+- apagar caracteres individuais, exceto espaço e fallback
+- resetar para a projeção original
 
-O campo de novo caractere aceita varios caracteres de uma vez. O app cria todos os glifos faltantes e seleciona o ultimo da sequencia.
+O campo de novo caractere aceita vários caracteres de uma vez. O app cria todos os glifos faltantes e seleciona o último da sequência.
 
 ### 5. Gerar caracteres derivados
 
-O editor pode ter acoes como:
+O editor pode ter ações como:
 
-- gerar acentos para maiusculas
-- gerar acentos para minusculas
+- gerar acentos para maiúsculas
+- gerar acentos para minúsculas
 - gerar cedilha
-- criar pontuacao/simbolos basicos
+- criar pontuação/símbolos básicos
 
 ### 6. Testar no letreiro
 
@@ -360,19 +360,19 @@ Faltando na fonte: ç, ã, #
 
 ### 7. Exportar/importar
 
-O usuario pode exportar a familia inteira como JSON. Importar deve validar:
+O usuário pode exportar a família inteira como JSON. Importar deve validar:
 
 - formato
-- versao
-- metricas obrigatorias
+- versão
+- métricas obrigatórias
 - integridade dos glifos
-- consistencia entre `width`, `height` e `rows`
+- consistência entre `width`, `height` e `rows`
 
-O app tambem aceita uma fonte individual antiga e a normaliza para a biblioteca atual.
+O app também aceita uma fonte individual antiga e a normaliza para a biblioteca atual.
 
-## Exportacao para hardware real
+## Exportação para hardware real
 
-O JSON e o formato-fonte principal. A partir dele, podem existir exportadores:
+O JSON é o formato-fonte principal. A partir dele, podem existir exportadores:
 
 - JSON compacto
 - C/C++ arrays para Arduino/ESP32
@@ -381,9 +381,9 @@ O JSON e o formato-fonte principal. A partir dele, podem existir exportadores:
 - hexadecimal por glifo
 - CSV ou texto simples para debug
 
-Decisao: exportadores de hardware devem ser derivados da fonte validada, nao de estado visual temporario.
+Decisao: exportadores de hardware devem ser derivados da fonte validada, não de estado visual temporário.
 
-## Plano de implementacao
+## Plano de implementação
 
 ### Fase 1: formalizar fontStore
 
@@ -398,9 +398,9 @@ Decisao: exportadores de hardware devem ser derivados da fonte validada, nao de 
 - Salvar fontes projetadas no `localStorage`.
 - Substituir overrides por fontes customizadas.
 - Quando uma fonte estiver projetada por altura de letra menor que o letreiro,
-  derivar/materializar uma nova familia com `height` igual a altura do letreiro.
+  derivar/materializar uma nova família com `height` igual a altura do letreiro.
   Os pixels projetados entram centralizados no canvas completo, deixando linhas
-  editaveis acima e abaixo para acentos, cedilha e ajustes manuais.
+  editáveis acima e abaixo para acentos, cedilha e ajustes manuais.
 
 ### Fase 3: render por fonte
 
@@ -421,12 +421,12 @@ Decisao: exportadores de hardware devem ser derivados da fonte validada, nao de 
 - Validar estrutura.
 - Permitir escolher fontes importadas na biblioteca.
 
-### Fase 6: composicao e Unicode
+### Fase 6: composição e Unicode
 
 - Permitir adicionar qualquer caractere.
 - Criar acentos e marcas como glifos.
 - Implementar `composites`.
-- Gerar glifos compostos editaveis.
+- Gerar glifos compostos editáveis.
 
 ### Fase 7: exportadores para hardware
 
@@ -435,36 +435,39 @@ Decisao: exportadores de hardware devem ser derivados da fonte validada, nao de 
 - Hex por linha.
 - Mapa compacto com metadados.
 
-## Estado atual do prototipo
+## Estado atual do protótipo
 
-No momento, o app ja tem:
+No momento, o app já tem:
 
 - simulador de letreiro LED
 - controles salvos em `localStorage`
 - fonte base 5x7
 - biblioteca de fontes em `localStorage`
 - editor visual de fonte/glifo em tela inteira
-- derivacao de fonte projetada com nome escolhido pelo usuario
-- salvar como para duplicar uma familia
-- apagar familias customizadas
-- importacao/exportacao de familia inteira
-- modo monoespacado com `advance` bloqueado
+- derivação de fonte projetada com nome escolhido pelo usuário
+- salvar como para duplicar uma família
+- apagar famílias customizadas
+- importação/exportação de família inteira
+- modo monoespaçado com `advance` bloqueado
 - modo proporcional/adaptado com `advance` por glifo
-- copia/cola de matriz de caractere para criar variantes e acentos
-- adicao de varios caracteres de uma vez
-- exclusao de caracteres individuais com protecao para espaco e fallback
-- espacamento padrao editavel com preview visual em letreiro continuo
+- cópia/cola de matriz de caractere para criar variantes e acentos
+- adição de vários caracteres de uma vez
+- exclusão de caracteres individuais com proteção para espaço e fallback
+- espaçamento padrão editável com preview visual em letreiro contínuo
+- editor reorganizado com parâmetros gerais próximos da grade do caractere
+- toolbox por ícones para operações frequentes do caractere
+- layout responsivo com redução de grid, campos e ícones antes de empilhar
 
-## Decisoes em aberto
+## Decisões em aberto
 
 - O editor deve permitir glifos com altura diferente da fonte ou sempre editar dentro de `metrics.height`?
-- Como representar kerning, se algum dia for necessario?
+- Como representar kerning, se algum dia for necessário?
 - O exportador para hardware deve priorizar linhas ou colunas?
-- Como lidar com normalizacao Unicode: `Á` precomposto versus `A` + acento combinante?
+- Como lidar com normalização Unicode: `Á` precomposto versus `A` + acento combinante?
 
-## Decisao inicial sobre kerning
+## Decisão inicial sobre kerning
 
-Kerning nao entra na primeira versao. Para letreiro LED, `advance` por glifo e `defaultLetterSpacing` provavelmente bastam. Se necessario no futuro, o formato pode receber:
+Kerning não entra na primeira versão. Para letreiro LED, `advance` por glifo e `defaultLetterSpacing` provavelmente bastam. Se necessário no futuro, o formato pode receber:
 
 ```json
 {
@@ -475,8 +478,8 @@ Kerning nao entra na primeira versao. Para letreiro LED, `advance` por glifo e `
 }
 ```
 
-## Decisao inicial sobre Unicode
+## Decisão inicial sobre Unicode
 
-O formato deve aceitar chaves Unicode diretamente. Para exportacao e validacao, cada glifo pode informar `codepoint`.
+O formato deve aceitar chaves Unicode diretamente. Para exportação e validação, cada glifo pode informar `codepoint`.
 
-Caracteres precompostos, como `Á`, devem ser suportados como glifos finais. Caracteres combinantes podem ser tratados futuramente por normalizacao e `composites`.
+Caracteres precompostos, como `Á`, devem ser suportados como glifos finais. Caracteres combinantes podem ser tratados futuramente por normalização e `composites`.
