@@ -33,13 +33,20 @@ const controls = {
   fontDelete: document.querySelector("#fontDeleteButton"),
   fontImportInput: document.querySelector("#fontImportInput"),
   guideToggle: document.querySelector("#guideToggleButton"),
+  characterAddDialog: document.querySelector("#characterAddDialog"),
+  characterAddCancel: document.querySelector("#characterAddCancelButton"),
   editorNewCharacter: document.querySelector("#editorNewCharacterInput"),
   editorAddCharacter: document.querySelector("#editorAddCharacterButton"),
   editorCopyCharacter: document.querySelector("#editorCopyCharacterButton"),
   editorPasteCharacter: document.querySelector("#editorPasteCharacterButton"),
   editorDeleteCharacter: document.querySelector("#editorDeleteCharacterButton"),
+  editorUndo: document.querySelector("#editorUndoButton"),
+  editorRedo: document.querySelector("#editorRedoButton"),
+  editorFontModeReadout: document.querySelector("#editorFontModeReadout"),
   fontPreview: document.querySelector("#fontPreview"),
   glyphWidth: document.querySelector("#glyphWidthInput"),
+  glyphAdvanceField: document.querySelector("#glyphAdvanceField"),
+  glyphAdvanceLabel: document.querySelector("#glyphAdvanceLabel"),
   glyphAdvance: document.querySelector("#glyphAdvanceInput"),
   glyphOffsetX: document.querySelector("#glyphOffsetXInput"),
   glyphOffsetY: document.querySelector("#glyphOffsetYInput"),
@@ -49,6 +56,8 @@ const controls = {
   fontCapHeight: document.querySelector("#fontCapHeightInput"),
   fontXHeight: document.querySelector("#fontXHeightInput"),
   editorGrid: document.querySelector("#editorGrid"),
+  editorCharacterLabel: document.querySelector("#editorCharacterLabel"),
+  editorCharacterMeta: document.querySelector("#editorCharacterMeta"),
   editorSave: document.querySelector("#editorSaveButton"),
   editorReset: document.querySelector("#editorResetButton"),
 };
@@ -81,6 +90,9 @@ let editorMetrics = {
 };
 let editorClipboard = null;
 let editorStrokeValue = null;
+let editorStrokeSnapshot = null;
+let editorUndoStack = [];
+let editorRedoStack = [];
 let editorGuidesVisible = true;
 
 const clamp = (value, min, max) => {
@@ -1000,19 +1012,30 @@ function openGlyphEditor() {
   persistActiveFontForEditing();
 
   controls.editor.hidden = false;
+  document.body.classList.add("editor-open");
   syncGlobalMetricInputs();
   renderFontPreview();
   loadEditorCharacter(editorCharacter);
+  requestAnimationFrame(resizeEditorGrid);
 }
 
 function closeGlyphEditor() {
   controls.editor.hidden = true;
+  document.body.classList.remove("editor-open");
 }
 
 function renderFontPreview() {
   const font = ensureActiveFont();
   const characters = Object.keys(font.glyphs).sort((left, right) => left.localeCompare(right, "pt-BR"));
   const previewSpacing = Math.max(0, font.metrics.defaultLetterSpacing);
+  const addButton = document.createElement("button");
+
+  addButton.type = "button";
+  addButton.className = "preview-glyph preview-glyph-add";
+  addButton.setAttribute("aria-label", "Adicionar caracteres");
+  addButton.title = "Adicionar caracteres";
+  addButton.textContent = "+";
+  addButton.addEventListener("click", openCharacterAddDialog);
 
   controls.fontPreview.replaceChildren(
     ...characters.map((char) => {
@@ -1052,7 +1075,18 @@ function renderFontPreview() {
       button.append(grid, label);
       return button;
     }),
+    addButton,
   );
+}
+
+function openCharacterAddDialog() {
+  controls.editorNewCharacter.value = "";
+  controls.characterAddDialog.showModal();
+  controls.editorNewCharacter.focus();
+}
+
+function closeCharacterAddDialog() {
+  controls.characterAddDialog.close();
 }
 
 function loadEditorCharacter(char) {
@@ -1066,11 +1100,23 @@ function loadEditorCharacter(char) {
     offsetX: glyph.offsetX,
     offsetY: glyph.offsetY,
   };
+  editorUndoStack = [];
+  editorRedoStack = [];
+  editorStrokeSnapshot = null;
+  controls.editorCharacterLabel.textContent = char === " " ? "Espaco" : char;
   syncEditorMetricInputs();
   syncGlobalMetricInputs();
   syncEditorClipboardControls();
+  syncEditorHistoryControls();
   renderFontPreview();
   renderEditorGrid();
+}
+
+function syncEditorCharacterMeta() {
+  const width = editorPixels[0]?.length || 1;
+  const height = editorPixels.length || 1;
+
+  controls.editorCharacterMeta.textContent = `${width}x${height}`;
 }
 
 function syncEditorMetricInputs() {
@@ -1084,6 +1130,9 @@ function syncEditorMetricInputs() {
   controls.glyphWidth.value = editorPixels[0]?.length || 1;
   controls.glyphAdvance.value = isMonospace ? font.metrics.defaultAdvance : editorMetrics.advance;
   controls.glyphAdvance.disabled = isMonospace;
+  controls.glyphAdvanceField.hidden = isMonospace;
+  controls.editorFontModeReadout.hidden = !isMonospace;
+  controls.glyphAdvanceLabel.textContent = "Advance";
   controls.glyphAdvance.title = isMonospace ? "Advance bloqueado no modo monoespacado" : "";
   controls.glyphOffsetX.value = editorMetrics.offsetX;
   controls.glyphOffsetY.value = editorMetrics.offsetY;
@@ -1091,6 +1140,7 @@ function syncEditorMetricInputs() {
   controls.glyphOffsetX.max = Math.max(width, editorMetrics.advance, font.metrics.defaultAdvance);
   controls.glyphOffsetY.min = -editorPixels.length;
   controls.glyphOffsetY.max = font.metrics.height;
+  syncEditorCharacterMeta();
 }
 
 function resizeGlyphPixels(nextWidth) {
@@ -1101,9 +1151,11 @@ function resizeGlyphPixels(nextWidth) {
     return;
   }
 
+  const previousPixels = cloneGlyph(editorPixels);
   editorPixels = editorPixels.map((row) =>
     Array.from({ length: width }, (_, x) => (x < currentWidth ? Boolean(row[x]) : false)),
   );
+  pushEditorPixelUndo(previousPixels);
   syncEditorMetricInputs();
   renderEditorGrid();
 }
@@ -1138,13 +1190,76 @@ function pasteEditorCharacter() {
     return;
   }
 
+  const previousPixels = cloneGlyph(editorPixels);
   editorPixels = cloneGlyph(editorClipboard.pixels);
   editorMetrics = { ...editorClipboard.metrics };
+  pushEditorPixelUndo(previousPixels);
   if (ensureActiveFont().metrics.mode !== "proportional") {
     editorMetrics.advance = ensureActiveFont().metrics.defaultAdvance;
   }
   syncEditorMetricInputs();
   renderEditorGrid();
+}
+
+function arePixelBuffersEqual(left, right) {
+  return glyphToStrings(left).join("\n") === glyphToStrings(right).join("\n");
+}
+
+function syncEditorHistoryControls() {
+  controls.editorUndo.disabled = editorUndoStack.length === 0;
+  controls.editorRedo.disabled = editorRedoStack.length === 0;
+}
+
+function pushEditorPixelUndo(previousPixels) {
+  if (arePixelBuffersEqual(previousPixels, editorPixels)) {
+    return;
+  }
+
+  editorUndoStack.push(cloneGlyph(previousPixels));
+  if (editorUndoStack.length > 80) {
+    editorUndoStack.shift();
+  }
+  editorRedoStack = [];
+  syncEditorHistoryControls();
+}
+
+function beginEditorPixelStroke() {
+  if (!editorStrokeSnapshot) {
+    editorStrokeSnapshot = cloneGlyph(editorPixels);
+  }
+}
+
+function commitEditorPixelStroke() {
+  if (!editorStrokeSnapshot) {
+    return;
+  }
+
+  pushEditorPixelUndo(editorStrokeSnapshot);
+  editorStrokeSnapshot = null;
+}
+
+function undoEditorPixels() {
+  if (editorUndoStack.length === 0) {
+    return;
+  }
+
+  editorRedoStack.push(cloneGlyph(editorPixels));
+  editorPixels = editorUndoStack.pop();
+  syncEditorMetricInputs();
+  renderEditorGrid();
+  syncEditorHistoryControls();
+}
+
+function redoEditorPixels() {
+  if (editorRedoStack.length === 0) {
+    return;
+  }
+
+  editorUndoStack.push(cloneGlyph(editorPixels));
+  editorPixels = editorRedoStack.pop();
+  syncEditorMetricInputs();
+  renderEditorGrid();
+  syncEditorHistoryControls();
 }
 
 function applyEditorStroke(glyphX, glyphY, value, cell) {
@@ -1171,8 +1286,7 @@ function createGuide({ className, label }) {
 
 function syncGuideToggle() {
   controls.editorGrid.classList.toggle("guides-hidden", !editorGuidesVisible);
-  controls.guideToggle.textContent = editorGuidesVisible ? "Ocultar guias" : "Mostrar guias";
-  controls.guideToggle.setAttribute("aria-pressed", String(editorGuidesVisible));
+  controls.guideToggle.checked = editorGuidesVisible;
 }
 
 function renderEditorGrid() {
@@ -1223,6 +1337,7 @@ function renderEditorGrid() {
             }
 
             event.preventDefault();
+            beginEditorPixelStroke();
             editorStrokeValue = !editorPixels[glyphY][glyphX];
             applyEditorStroke(glyphX, glyphY, editorStrokeValue, button);
           });
@@ -1239,7 +1354,9 @@ function renderEditorGrid() {
             }
 
             event.preventDefault();
+            const previousPixels = cloneGlyph(editorPixels);
             applyEditorStroke(glyphX, glyphY, !editorPixels[glyphY][glyphX], button);
+            pushEditorPixelUndo(previousPixels);
           });
         }
 
@@ -1284,6 +1401,7 @@ function addEditorCharacter() {
 
   editorCharacter = chars[chars.length - 1];
   controls.editorNewCharacter.value = "";
+  closeCharacterAddDialog();
   loadEditorCharacter(editorCharacter);
   renderFontPreview();
   markTextDirty();
@@ -1320,36 +1438,35 @@ function resizeEditorGrid() {
     return;
   }
 
-  const panel = controls.editor.querySelector(".glyph-editor-panel");
-  const header = controls.editor.querySelector(".glyph-editor-header");
-  const globalMetrics = controls.editor.querySelector(".font-global-metrics");
-  const preview = controls.editor.querySelector(".font-preview");
-  const createRow = controls.editor.querySelector(".character-create");
-  const metricsRow = controls.editor.querySelector(".glyph-metrics");
-  const editArea = controls.editor.querySelector(".glyph-edit-area");
-  const columns = editorPixels[0]?.length || 1;
-  const rows = editorPixels.length || 1;
-  const panelStyle = getComputedStyle(panel);
+  const editorPanel = controls.editor.querySelector(".glyph-editor-panel");
+  const workbench = controls.editor.querySelector(".glyph-workbench");
+  const gridStage = controls.editor.querySelector(".glyph-grid-stage");
+  const sidePanel = controls.editor.querySelector(".glyph-side-panel");
+  const toolbox = controls.editor.querySelector(".glyph-toolbox");
   const gridStyle = getComputedStyle(controls.editorGrid);
-  const gap = parseFloat(gridStyle.columnGap) || 0;
-  const panelGap = parseFloat(panelStyle.rowGap) || 0;
-  const panelPaddingY = parseFloat(panelStyle.paddingTop) + parseFloat(panelStyle.paddingBottom);
-  const panelPaddingX = parseFloat(panelStyle.paddingLeft) + parseFloat(panelStyle.paddingRight);
-  const reservedHeight =
-    header.offsetHeight +
-    globalMetrics.offsetHeight +
-    preview.offsetHeight +
-    createRow.offsetHeight +
-    panelGap * 4 +
-    panelPaddingY +
-    18;
-  const availableHeight = Math.max(90, panel.clientHeight - reservedHeight);
-  const availableWidth = Math.max(90, editArea.clientWidth - metricsRow.offsetWidth - 40);
-  const cellByHeight = (availableHeight - gap * (rows - 1)) / rows;
-  const cellByWidth = (availableWidth - gap * (columns - 1)) / columns;
-  const cellSize = Math.max(12, Math.floor(Math.min(cellByHeight, cellByWidth, 54)));
+  const editorPanelStyle = getComputedStyle(editorPanel);
+  const workbenchStyle = getComputedStyle(workbench);
+  const gridStageStyle = getComputedStyle(gridStage);
+  const columns = parseInt(gridStyle.getPropertyValue("--glyph-columns"), 10) || editorPixels[0]?.length || 1;
+  const rows = parseInt(gridStyle.getPropertyValue("--glyph-rows"), 10) || editorPixels.length || 1;
+  const guidePadding = 42;
+  const panelPaddingY = parseFloat(editorPanelStyle.paddingTop) + parseFloat(editorPanelStyle.paddingBottom);
+  const workbenchGap = parseFloat(workbenchStyle.columnGap) || 0;
+  const stageMarginX = parseFloat(gridStageStyle.marginLeft) + parseFloat(gridStageStyle.marginRight);
+  const sideColumnsWidth = sidePanel.offsetWidth + toolbox.offsetWidth + workbenchGap * 2;
+  const stagePaddingY = parseFloat(gridStageStyle.paddingTop) + parseFloat(gridStageStyle.paddingBottom);
+  const stagePaddingX = parseFloat(gridStageStyle.paddingLeft) + parseFloat(gridStageStyle.paddingRight);
+  const viewportBudget = Math.max(160, window.innerHeight - editorPanel.offsetTop - panelPaddingY);
+  const availableHeight = Math.max(70, Math.min(viewportBudget * 0.72, 620) - stagePaddingY - guidePadding);
+  const availableWidth = Math.max(90, workbench.clientWidth - sideColumnsWidth - stageMarginX - stagePaddingX);
+  const firstPassCell = Math.floor(Math.min(availableHeight / rows, availableWidth / columns, 54));
+  const nextGap = clamp(Math.floor(firstPassCell / 3), 1, 5);
+  const cellByHeight = (availableHeight - nextGap * (rows - 1)) / rows;
+  const cellByWidth = (availableWidth - nextGap * (columns - 1)) / columns;
+  const cellSize = Math.max(3, Math.floor(Math.min(cellByHeight, cellByWidth, 54)));
 
   controls.editorGrid.style.setProperty("--glyph-cell-size", `${cellSize}px`);
+  controls.editorGrid.style.setProperty("--glyph-grid-gap", `${nextGap}px`);
 }
 
 function saveEditorCharacter() {
@@ -1421,14 +1538,19 @@ function resetEditorCharacter() {
   const resetFont = getDefaultFontForReset(font, settings);
 
   if (resetFont.glyphs[editorCharacter]) {
-    font.glyphs[editorCharacter] = resetFont.glyphs[editorCharacter];
-    font.updatedAt = new Date().toISOString();
-    saveFontLibrary();
+    const previousPixels = cloneGlyph(editorPixels);
+    const glyph = resetFont.glyphs[editorCharacter];
+    editorPixels = cloneGlyph(stringsToGlyph(glyph.rows));
+    editorMetrics = {
+      advance: glyph.advance,
+      offsetX: glyph.offsetX,
+      offsetY: glyph.offsetY,
+    };
+    pushEditorPixelUndo(previousPixels);
   }
 
-  loadEditorCharacter(editorCharacter);
-  renderFontPreview();
-  markTextDirty();
+  syncEditorMetricInputs();
+  renderEditorGrid();
 }
 
 function exportActiveFontFamily() {
@@ -1848,7 +1970,10 @@ controls.editorOpen.addEventListener("click", openGlyphEditor);
 controls.editorClose.addEventListener("click", closeGlyphEditor);
 controls.editorSave.addEventListener("click", saveEditorCharacter);
 controls.editorReset.addEventListener("click", resetEditorCharacter);
+controls.editorUndo.addEventListener("click", undoEditorPixels);
+controls.editorRedo.addEventListener("click", redoEditorPixels);
 controls.editorAddCharacter.addEventListener("click", addEditorCharacter);
+controls.characterAddCancel.addEventListener("click", closeCharacterAddDialog);
 controls.editorCopyCharacter.addEventListener("click", copyEditorCharacter);
 controls.editorPasteCharacter.addEventListener("click", pasteEditorCharacter);
 controls.editorDeleteCharacter.addEventListener("click", deleteEditorCharacter);
@@ -1858,8 +1983,8 @@ controls.fontDefaultLetterSpacing.addEventListener("input", updateDefaultLetterS
 controls.fontSaveAs.addEventListener("click", saveActiveFontAs);
 controls.fontSaveAsMain.addEventListener("click", saveActiveFontAs);
 controls.fontDerive.addEventListener("click", deriveProjectedFont);
-controls.guideToggle.addEventListener("click", () => {
-  editorGuidesVisible = !editorGuidesVisible;
+controls.guideToggle.addEventListener("change", () => {
+  editorGuidesVisible = controls.guideToggle.checked;
   syncGuideToggle();
 });
 controls.editorNewCharacter.addEventListener("keydown", (event) => {
@@ -1872,9 +1997,11 @@ controls.glyphAdvance.addEventListener("input", () => updateEditorMetric(control
 controls.glyphOffsetX.addEventListener("input", () => updateEditorMetric(controls.glyphOffsetX, "offsetX"));
 controls.glyphOffsetY.addEventListener("input", () => updateEditorMetric(controls.glyphOffsetY, "offsetY"));
 window.addEventListener("pointerup", () => {
+  commitEditorPixelStroke();
   editorStrokeValue = null;
 });
 window.addEventListener("pointercancel", () => {
+  editorStrokeSnapshot = null;
   editorStrokeValue = null;
 });
 controls.fontBaseline.addEventListener("input", () => updateGlobalFontMetric(controls.fontBaseline, "baseline"));
