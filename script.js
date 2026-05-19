@@ -1,5 +1,8 @@
 const canvas = document.querySelector("#ledCanvas");
 const ctx = canvas.getContext("2d");
+const BASE_LED_SIZE = 8;
+const LUMINOSITY_MIN = 4;
+const LUMINOSITY_MAX = 14;
 
 const controls = {
   message: document.querySelector("#messageInput"),
@@ -158,7 +161,8 @@ function getSettings() {
     columns: clamp(controls.width.value, 16, 512),
     rows: clamp(controls.height.value, 7, 48),
     gap: clamp(controls.gap.value, 1, 8),
-    ledSize: clamp(controls.ledSize.value, 4, 14),
+    ledSize: BASE_LED_SIZE,
+    luminosity: clamp(controls.ledSize.value, LUMINOSITY_MIN, LUMINOSITY_MAX),
     letterHeight: clamp(controls.letterHeight.value, 45, 100) / 100,
     letterSpacing: clamp(controls.letterSpacing.value, 0, 8),
     color: controls.color.value,
@@ -1853,19 +1857,25 @@ function hexToRgb(hex) {
   };
 }
 
+function getLedDensity(settings) {
+  return clamp(settings.luminosity, LUMINOSITY_MIN, LUMINOSITY_MAX) / BASE_LED_SIZE;
+}
+
 function drawLed(x, y, active, rgb, settings) {
   const pitch = settings.ledSize + settings.gap;
+  const density = getLedDensity(settings);
   const cx = settings.gap + x * pitch + settings.ledSize / 2;
   const cy = settings.gap + y * pitch + settings.ledSize / 2;
-  const radius = settings.ledSize / 2;
+  const maxRadius = Math.max(1, (pitch - 1) / 2);
+  const radius = Math.min(maxRadius, (settings.ledSize / 2) * density);
 
   ctx.beginPath();
   ctx.arc(cx, cy, radius, 0, Math.PI * 2);
 
   if (active) {
     ctx.fillStyle = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
-    ctx.shadowColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.74)`;
-    ctx.shadowBlur = Math.max(8, settings.ledSize * 1.8);
+    ctx.shadowColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${Math.min(0.86, 0.42 + density * 0.28)})`;
+    ctx.shadowBlur = Math.max(4, settings.ledSize * density * 1.25);
   } else {
     ctx.fillStyle = "rgba(54, 60, 58, 0.34)";
     ctx.shadowBlur = 0;
