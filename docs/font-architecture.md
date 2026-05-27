@@ -145,6 +145,8 @@ O formato principal de importação/exportação é a família inteira:
 
 Cada item de `fonts` deve ser uma fonte individual válida. Importar uma família substitui as variações customizadas existentes daquela família. A importação de uma fonte individual ainda é aceita como compatibilidade.
 
+Uma família possui somente uma variação efetiva por `metrics.height`. A fonte base somente leitura funciona como padrão; quando existir uma fonte editada na mesma família e altura, a editada substitui a base no render e no export. A importação reconhece exports legados contendo simultaneamente base e override com o mesmo `id`/altura e preserva o override; duplicidades ambíguas são inválidas.
+
 ## Campos obrigatórios
 
 Para uma fonte ser renderizável e exportável, estes campos devem existir:
@@ -383,6 +385,28 @@ O JSON é o formato-fonte principal. A partir dele, podem existir exportadores:
 
 Decisao: exportadores de hardware devem ser derivados da fonte validada, não de estado visual temporário.
 
+### Exportador C/C++ column-major
+
+O primeiro exportador de hardware gera um cabeçalho `.h` para a fonte ativa. Cada coluna armazena pixels do topo para baixo, com `bit 0` correspondendo ao pixel superior. Essa orientação favorece a rolagem horizontal do letreiro.
+
+O tipo do bitmap depende da altura:
+
+| Altura da fonte | Armazenamento por coluna |
+| --- | --- |
+| 1 a 8 LEDs | `uint8_t` |
+| 9 a 16 LEDs | `uint16_t` |
+| 17 a 32 LEDs | `uint32_t` |
+| acima de 32 LEDs | bytes consecutivos por coluna |
+
+O cabeçalho contém:
+
+- `LedGlyph`: `codepoint`, `bitmapOffset`, `width`, `advance`, `offsetX` e `offsetY`;
+- `LedFont`: `height`, `baseline`, espaçamentos, fallback e quantidade de glifos;
+- bitmap column-major em `PROGMEM`;
+- índice de glifos ordenado por codepoint Unicode.
+
+Somente glifos Unicode precompostos e materializados são exportados. `anchors`, nomes, categorias, datas e regras futuras de composição permanecem no JSON editorial e não entram no firmware.
+
 ## Plano de implementação
 
 ### Fase 1: formalizar fontStore
@@ -462,7 +486,7 @@ No momento, o app já tem:
 
 - O editor deve permitir glifos com altura diferente da fonte ou sempre editar dentro de `metrics.height`?
 - Como representar kerning, se algum dia for necessário?
-- O exportador para hardware deve priorizar linhas ou colunas?
+- Se exportadores adicionais row-major serão necessários para bibliotecas de display específicas.
 - Como lidar com normalização Unicode: `Á` precomposto versus `A` + acento combinante?
 
 ## Decisão inicial sobre kerning

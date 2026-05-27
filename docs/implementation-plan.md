@@ -284,6 +284,13 @@ Critérios de aceite:
 - O formato explicita largura, altura e advance.
 - Não há dependência de estado visual temporário.
 
+Decisão implementada inicialmente:
+
+- O exportador C/C++ column-major é a primeira saída de firmware disponível.
+- A fonte ativa gera tabela Unicode e bitmap em `PROGMEM`.
+- Cada altura da família é um slot único; overrides editáveis substituem a fonte base da mesma altura.
+- Imports legados com a duplicidade base/override são normalizados, enquanto colisões ambíguas são rejeitadas.
+
 ## Riscos e cuidados
 
 ### Layout do editor
@@ -335,7 +342,9 @@ Implementado:
 - Adição manual de novos caracteres digitáveis no editor.
 - Migração inicial da chave antiga `ledMatrixCustomGlyphs` para a biblioteca de fontes.
 - Exportação JSON da família ativa.
+- Exportação C/C++ column-major da fonte ativa, com `uint8_t`, `uint16_t`, `uint32_t` ou bytes por coluna conforme a altura.
 - Importação JSON de família com validação estrutural.
+- Resolução de uma única variação por altura de família, evitando export duplicado da base e de seu override editável.
 - Compatibilidade de importação com JSON antigo de fonte única.
 - Render preservando caracteres Unicode quando a fonte ativa possui o glifo, com fallback para normalização quando não possui.
 - Editor com controles iniciais de `width`, `advance`, `offsetX` e `offsetY` por glifo.
@@ -380,4 +389,4 @@ Ainda pendente:
 - Redimensionamento vertical controlado do glifo, se decidirmos permitir glifos com altura diferente da fonte.
 - Anchors editáveis.
 - Composição de acentos e cedilha.
-- Exportadores específicos para hardware.
+- Exportadores adicionais de hardware, como row-major ou binário compacto.

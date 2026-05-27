@@ -32,6 +32,7 @@ const controls = {
   editorClose: document.querySelector("#editorCloseButton"),
   fontDerive: document.querySelector("#fontDeriveButton"),
   fontExport: document.querySelector("#fontExportButton"),
+  fontFirmwareExport: document.querySelector("#fontFirmwareExportButton"),
   fontImport: document.querySelector("#fontImportButton"),
   fontDelete: document.querySelector("#fontDeleteButton"),
   fontImportInput: document.querySelector("#fontImportInput"),
@@ -439,7 +440,7 @@ function normalizeFont(font) {
     familyName: font.familyName || font.name || "Fonte importada",
     name: font.name || "Fonte importada",
     encoding: font.encoding || "unicode",
-    readonly: false,
+    readonly: font.readonly === true,
     createdAt: font.createdAt || timestamp,
     updatedAt: timestamp,
     metrics: {
@@ -555,9 +556,19 @@ function slugifyId(value) {
 }
 
 function getFontsForFamily(familyId) {
-  return getAllFonts()
+  const fontsByHeight = new Map();
+
+  getAllFonts()
     .filter((font) => font.familyId === familyId)
-    .sort((left, right) => left.metrics.height - right.metrics.height || Number(left.readonly) - Number(right.readonly));
+    .forEach((font) => {
+      const current = fontsByHeight.get(font.metrics.height);
+
+      if (!current || current.readonly || !font.readonly) {
+        fontsByHeight.set(font.metrics.height, font);
+      }
+    });
+
+  return [...fontsByHeight.values()].sort((left, right) => left.metrics.height - right.metrics.height);
 }
 
 function getBestFontForHeight(familyId, targetHeight) {
@@ -1557,6 +1568,17 @@ function resetEditorCharacter() {
   renderEditorGrid();
 }
 
+function downloadTextFile(contents, fileName, type) {
+  const blob = new Blob([contents], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 function exportActiveFontFamily() {
   const font = ensureActiveFont();
   const familyFonts = getFontsForFamily(font.familyId).map((familyFont) => ({
@@ -1575,14 +1597,240 @@ function exportActiveFontFamily() {
     null,
     2,
   );
-  const blob = new Blob([payload], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
 
-  link.href = url;
-  link.download = `${font.familyId}-family.json`;
-  link.click();
-  URL.revokeObjectURL(url);
+  downloadTextFile(payload, `${font.familyId}-family.json`, "application/json");
+}
+
+function selectFirmwareBitmapLayout(height) {
+  if (height <= 8) {
+    return { cppType: "uint8_t", hexDigits: 2, bytePacked: false };
+  }
+
+  if (height <= 16) {
+    return { cppType: "uint16_t", hexDigits: 4, bytePacked: false };
+  }
+
+  if (height <= 32) {
+    return { cppType: "uint32_t", hexDigits: 8, bytePacked: false };
+  }
+
+  return { cppType: "uint8_t", hexDigits: 2, bytePacked: true };
+}
+
+function formatCppHex(value, digits) {
+  return `0x${value.toString(16).toUpperCase().padStart(digits, "0")}`;
+}
+
+function formatCppArray(values, valuesPerLine = 10) {
+  const lines = [];
+
+  for (let index = 0; index < values.length; index += valuesPerLine) {
+    lines.push(`  ${values.slice(index, index + valuesPerLine).join(", ")},`);
+  }
+
+  return lines.join("\n");
+}
+
+function getFirmwareGlyphs(font) {
+  const glyphs = [];
+  const codepoints = new Set();
+
+  Object.entries(font.glyphs).forEach(([char, glyph]) => {
+    const normalizedChar = char.normalize("NFC");
+    const parts = [...normalizedChar];
+
+    if (parts.length !== 1 || normalizedChar !== char) {
+      throw new Error(`O glifo "${char}" precisa ser um unico caractere Unicode precomposto para exportacao.`);
+    }
+
+    if (glyph.height > font.metrics.height) {
+      throw new Error(`O glifo "${char}" excede a altura da fonte e nao pode ser exportado.`);
+    }
+
+    const codepoint = normalizedChar.codePointAt(0);
+
+    if (codepoints.has(codepoint)) {
+      throw new Error(`A fonte possui mais de um glifo para ${getCodepoint(normalizedChar)}.`);
+    }
+
+    codepoints.add(codepoint);
+    glyphs.push({ codepoint, glyph });
+  });
+
+  return glyphs.sort((left, right) => left.codepoint - right.codepoint);
+}
+
+function buildCppFirmwareExport(font) {
+  if (!isValidFont(font)) {
+    throw new Error("A fonte ativa nao e valida para exportacao.");
+  }
+
+  const layout = selectFirmwareBitmapLayout(font.metrics.height);
+  const glyphs = getFirmwareGlyphs(font);
+  const fallbackChar = font.metrics.fallback.normalize("NFC");
+  const fallbackParts = [...fallbackChar];
+
+  if (fallbackParts.length !== 1) {
+    throw new Error("O fallback da fonte precisa ser um unico caractere Unicode.");
+  }
+
+  const fallback = fallbackChar.codePointAt(0);
+
+  if (!glyphs.some((entry) => entry.codepoint === fallback)) {
+    throw new Error("O glifo de fallback nao esta presente na fonte ativa.");
+  }
+
+  if (glyphs.length > 0xffff) {
+    throw new Error("A fonte excede o limite de glifos uint16_t do formato C/C++.");
+  }
+
+  const symbol = `led_font_${slugifyId(font.id).replace(/-/g, "_")}`;
+  const bitmap = [];
+  const glyphRows = [];
+
+  glyphs.forEach(({ codepoint, glyph }) => {
+    const offset = bitmap.length;
+
+    for (let x = 0; x < glyph.width; x += 1) {
+      if (layout.bytePacked) {
+        for (let byte = 0; byte < Math.ceil(font.metrics.height / 8); byte += 1) {
+          let value = 0;
+
+          for (let bit = 0; bit < 8; bit += 1) {
+            const y = byte * 8 + bit;
+
+            if (y < glyph.height && glyph.rows[y][x] === "1") {
+              value += 2 ** bit;
+            }
+          }
+
+          bitmap.push(value);
+        }
+      } else {
+        let value = 0;
+
+        for (let y = 0; y < glyph.height; y += 1) {
+          if (glyph.rows[y][x] === "1") {
+            value += 2 ** y;
+          }
+        }
+
+        bitmap.push(value);
+      }
+    }
+
+    if (offset > 0xffff) {
+      throw new Error("O bitmap excede o limite de offset uint16_t do formato C/C++.");
+    }
+
+    glyphRows.push(
+      `  { ${formatCppHex(codepoint, 8)}, ${offset}, ${glyph.width}, ${glyph.advance}, ${glyph.offsetX}, ${glyph.offsetY} }, // ${getCodepoint(String.fromCodePoint(codepoint))}`,
+    );
+  });
+
+  const formattedBitmap = bitmap.map((value) => formatCppHex(value, layout.hexDigits));
+  const offsetDescription = layout.bytePacked
+    ? `byte offset; ${Math.ceil(font.metrics.height / 8)} consecutive bytes per column`
+    : `${layout.cppType} column offset`;
+
+  return `// Generated by LED Matrix Sign Simulator.
+// Font: ${font.name}
+// Column-major bitmap: bit 0 is the top pixel of each column.
+// Glyph bitmapOffset is a ${offsetDescription}.
+
+#pragma once
+#include <stdint.h>
+
+#if defined(ARDUINO)
+#include <Arduino.h>
+#else
+#ifndef PROGMEM
+#define PROGMEM
+#endif
+#endif
+
+#ifndef LED_MATRIX_FONT_TYPES_DEFINED
+#define LED_MATRIX_FONT_TYPES_DEFINED
+typedef struct {
+  uint32_t codepoint;
+  uint16_t bitmapOffset;
+  uint8_t width;
+  uint8_t advance;
+  int8_t offsetX;
+  int8_t offsetY;
+} LedGlyph;
+
+typedef struct {
+  uint8_t height;
+  uint8_t baseline;
+  uint8_t defaultLetterSpacing;
+  uint8_t defaultWordSpacing;
+  uint32_t fallbackCodepoint;
+  uint16_t glyphCount;
+} LedFont;
+#endif
+
+const ${layout.cppType} ${symbol}_bitmap[] PROGMEM = {
+${formatCppArray(formattedBitmap)}
+};
+
+const LedGlyph ${symbol}_glyphs[] PROGMEM = {
+${glyphRows.join("\n")}
+};
+
+const LedFont ${symbol} PROGMEM = {
+  ${font.metrics.height},
+  ${font.metrics.baseline},
+  ${font.metrics.defaultLetterSpacing},
+  ${font.metrics.defaultWordSpacing},
+  ${formatCppHex(fallback, 8)},
+  ${glyphs.length}
+};
+`;
+}
+
+function exportActiveFontFirmwareCpp() {
+  try {
+    const font = ensureActiveFont();
+    const header = buildCppFirmwareExport(font);
+
+    downloadTextFile(header, `${font.id}-column-major.h`, "text/x-c++hdr");
+  } catch (error) {
+    window.alert(error.message || "Nao foi possivel exportar a fonte para C/C++.");
+  }
+}
+
+function resolveImportedFamilyVariants(fonts) {
+  const fontsByHeight = new Map();
+  const idHeights = new Map();
+
+  fonts.forEach((font) => {
+    const knownHeight = idHeights.get(font.id);
+
+    if (knownHeight !== undefined && knownHeight !== font.metrics.height) {
+      throw new Error(`A familia reutiliza o id "${font.id}" em alturas diferentes.`);
+    }
+
+    idHeights.set(font.id, font.metrics.height);
+    const current = fontsByHeight.get(font.metrics.height);
+
+    if (!current) {
+      fontsByHeight.set(font.metrics.height, font);
+      return;
+    }
+
+    const isLegacyBaseOverride =
+      current.id === font.id && current.readonly !== font.readonly;
+
+    if (isLegacyBaseOverride) {
+      fontsByHeight.set(font.metrics.height, current.readonly ? font : current);
+      return;
+    }
+
+    throw new Error(`A familia possui mais de uma fonte para a altura ${font.metrics.height}px.`);
+  });
+
+  return [...fontsByHeight.values()].sort((left, right) => left.metrics.height - right.metrics.height);
 }
 
 function requestFontImport() {
@@ -1602,7 +1850,7 @@ function importFontFile(event) {
   reader.addEventListener("load", () => {
     try {
       const payload = JSON.parse(reader.result);
-      const fonts = isValidFontFamilyBundle(payload)
+      const importedFonts = isValidFontFamilyBundle(payload)
         ? payload.fonts.map((font) =>
             normalizeFont({
               ...font,
@@ -1613,9 +1861,14 @@ function importFontFile(event) {
           )
         : [normalizeFont(payload)];
 
-      if (!fonts.every(isValidFont)) {
+      if (!importedFonts.every(isValidFont)) {
         throw new Error("Formato de fonte invalido.");
       }
+
+      const fonts = resolveImportedFamilyVariants(importedFonts).map((font) => ({
+        ...font,
+        readonly: false,
+      }));
 
       replaceCustomFontFamily(fonts);
       const font = fonts[0];
@@ -2020,6 +2273,7 @@ controls.fontDescent.addEventListener("input", () => updateGlobalFontMetric(cont
 controls.fontCapHeight.addEventListener("input", () => updateGlobalFontMetric(controls.fontCapHeight, "capHeight"));
 controls.fontXHeight.addEventListener("input", () => updateGlobalFontMetric(controls.fontXHeight, "xHeight"));
 controls.fontExport.addEventListener("click", exportActiveFontFamily);
+controls.fontFirmwareExport.addEventListener("click", exportActiveFontFirmwareCpp);
 controls.fontImport.addEventListener("click", requestFontImport);
 controls.fontDelete.addEventListener("click", deleteActiveFont);
 controls.fontImportInput.addEventListener("change", importFontFile);

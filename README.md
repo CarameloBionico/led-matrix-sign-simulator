@@ -22,6 +22,7 @@ O projeto começou como um simulador simples de frase em matriz LED e evoluiu pa
 - Mostra o preview dos caracteres em um letreiro contínuo, com colunas de espaçamento destacadas em cor mais escura.
 - Organiza métricas globais da fonte perto do editor de caractere para mostrar a relação entre parâmetros e linhas-guia.
 - Exporta e importa a família inteira em JSON.
+- Exporta a fonte ativa como cabeçalho C/C++ column-major para firmware.
 
 ## Fluxo recomendado
 
@@ -90,6 +91,20 @@ O formato principal de exportação é um pacote de família:
 
 Cada item de `fonts` é uma fonte bitmap completa em uma altura específica. A importação ainda aceita JSON antigo de fonte única para compatibilidade.
 
+Cada família possui no máximo uma fonte por altura. Na família base, uma variação editada da mesma altura substitui a versão somente leitura no render e no export. Arquivos antigos que continham ambas as entradas são recuperados na importação quando a substituição é inequívoca.
+
+## Exportação para firmware
+
+O JSON continua sendo o formato mestre para edição, backup e intercâmbio. O botão **Exportar C/C++** gera um cabeçalho `.h` somente para a fonte ativa, pronto para ser embutido em firmware:
+
+- bitmap em ordem column-major, com `bit 0` representando o LED superior;
+- `uint8_t` para fontes de até 8 px, `uint16_t` até 16 px e `uint32_t` até 32 px;
+- acima de 32 px, bytes consecutivos por coluna;
+- tabela `LedGlyph` ordenada por codepoint Unicode e metadados `LedFont`;
+- glifos finais precompostos para acentos e cedilha, sem composição em runtime.
+
+O firmware deve decodificar o texto UTF-8 para codepoints e procurar a entrada correspondente na tabela de glifos.
+
 ## Documentação
 
 - [Arquitetura de fontes bitmap](docs/font-architecture.md)
@@ -99,4 +114,4 @@ Cada item de `fonts` é uma fonte bitmap completa em uma altura específica. A i
 
 A decisão principal é tratar fontes como famílias com uma ou mais instâncias por altura. O render final deve desenhar glifos bitmap prontos, sem rasterizar fontes vetoriais nem reinterpretar os caracteres durante a exibição.
 
-Exportadores para hardware real ainda devem ser derivados da família/fonte validada, não do estado visual temporário do simulador.
+Exportadores para hardware real são derivados da fonte bitmap ativa validada, não do estado visual temporário do editor.
